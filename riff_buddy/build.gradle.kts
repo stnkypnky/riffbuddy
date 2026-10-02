@@ -31,10 +31,10 @@ android {
         // (Fire OS 7 = API 28), which are the two test devices (the spec).
         minSdk = 26
         targetSdk = 37
-        versionCode = 2
+        versionCode = 3
         // 1.0.0 with the desktop edition. Also the desktop installers' version,
         // and macOS refuses one that starts with 0.
-        versionName = "1.0.0"
+        versionName = "1.0.1"
 
         // alphaTab brings Skia as native code, about 7 MB per ABI. Only ARM is
         // kept: the S22 is arm64 and the Fire HD 10 is armeabi-v7a *only* — a

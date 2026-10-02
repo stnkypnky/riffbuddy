@@ -158,6 +158,15 @@ interface Platform {
     /** The app's icon artwork (the guitar, without a background), for welcome screens. */
     @Composable
     fun appIcon(): Painter
+
+    /**
+     * The size the system's own launch screen drew the icon at, so the opening
+     * animation starts from exactly what was already showing.
+     */
+    val launchIconDp: Int get() = 220
+
+    /** A screen reader is on: a silent animation would only be a delay. */
+    val screenReaderOn: Boolean get() = false
 }
 
 /**

@@ -289,4 +289,11 @@ class AndroidPlatform(private val activity: ComponentActivity, private val app: 
 
     @Composable
     override fun appIcon(): Painter = painterResource(R.drawable.ic_launcher_foreground)
+
+    // Android 12+ draws the animated splash icon at 240 dp; our own launch window, 220.
+    override val launchIconDp: Int get() = if (android.os.Build.VERSION.SDK_INT >= 31) 240 else 220
+
+    override val screenReaderOn: Boolean
+        get() = (context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? android.view.accessibility.AccessibilityManager)
+            ?.isTouchExplorationEnabled == true
 }

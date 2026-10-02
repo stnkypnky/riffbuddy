@@ -17,6 +17,7 @@ import androidx.compose.ui.text.platform.Font
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
@@ -26,6 +27,7 @@ import com.riffbuddy.audio.MetronomeEngine
 import com.riffbuddy.audio.MetronomeSettings
 import com.riffbuddy.audio.TapTempo
 import com.riffbuddy.platform.LocalPlatform
+import com.riffbuddy.ui.Intro
 import com.riffbuddy.ui.RiffBuddyContent
 import com.riffbuddy.ui.theme.RiffBuddyTheme
 import java.awt.Dimension
@@ -36,7 +38,9 @@ import java.util.prefs.Preferences
 fun main() {
     val dataDir = DesktopPaths.data.apply { mkdirs() }
     val cacheDir = DesktopPaths.cache.apply { mkdirs() }
+    AppIdentity.apply()
     LinuxFonts.prepare(cacheDir)
+    LinuxFonts.warmUp()
     val services = AppServices(
         db = JdbcDb(File(dataDir, "riffbuddy.db")),
         audioOutputs = DesktopAudioOutputs(),
@@ -56,7 +60,9 @@ fun main() {
     application {
         val state = rememberWindowState(
             size = DpSize(prefs.getInt("width", 1100).dp, prefs.getInt("height", 820).dp),
-            position = WindowPosition.PlatformDefault,
+            // Centered, over where the splash was, so the opening animation
+            // carries on from it in place.
+            position = WindowPosition.Aligned(Alignment.Center),
         )
         val tapper = remember { TapTempo() }
         Window(
@@ -68,7 +74,7 @@ fun main() {
             },
             state = state,
             title = "Riff Buddy",
-            icon = loadSvgPainter(platform.openAsset("icon/app-icon.svg"), androidx.compose.ui.unit.Density(1f)),
+            icon = AppIdentity.windowIcon(),
             // Keys a focused control did not use. A text field keeps its own
             // typing, so Space in the song search never starts the metronome.
             onKeyEvent = { event -> shortcut(event, services.metronome, tapper, platform) },
@@ -76,12 +82,13 @@ fun main() {
             LaunchedEffect(window) {
                 platform.window = window
                 platform.acceptDrops(window)
+                window.iconImages = AppIdentity.windowIconImages()
                 // Narrower than a phone held upright is narrower than any layout here.
                 window.minimumSize = Dimension(420, 560)
             }
             RiffBuddyTheme(condensedFont = Condensed, systemReducedMotion = reducedMotion) {
                 CompositionLocalProvider(LocalPlatform provides platform) {
-                    RiffBuddyContent(services)
+                    RiffBuddyContent(services, overlay = { Intro() })
                 }
             }
         }

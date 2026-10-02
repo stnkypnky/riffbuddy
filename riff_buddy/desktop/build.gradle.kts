@@ -62,16 +62,29 @@ sourceSets.main {
 val appVersion: String = Regex("""versionName\s*=\s*"([^"]+)"""")
     .find(file("../build.gradle.kts").readText())!!.groupValues[1]
 
+// Each installer is built on the system it's for.
+val hostOs = System.getProperty("os.name").lowercase()
+val hostArm = System.getProperty("os.arch").lowercase().let { "aarch64" in it || "arm64" in it }
+
 compose.desktop {
     application {
         mainClass = "com.riffbuddy.desktop.MainKt"
         jvmArgs += "-Driffbuddy.version=$appVersion"
+        // The splash: Java shows it the moment the app starts, before any of the
+        // app has loaded, and takes it down when the window opens. Installed
+        // apps find it beside them; desktop:run shows none.
+        jvmArgs += "-splash:\$APPDIR/resources/splash.png"
+        // On Linux, the app names its window class to match its menu entry,
+        // which takes reaching into Java's X11 toolkit (see AppIdentity).
+        if ("linux" in hostOs) jvmArgs += "--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED"
 
         // No shrinking: alphaTab and its drawing library are reached by name
         // from native code and by reflection, which a shrinker can't follow.
         buildTypes.release.proguard { isEnabled = false }
 
         nativeDistributions {
+            // Files every installer carries beside the app: the splash.
+            appResourcesRootDir = layout.projectDirectory.dir("launch")
             targetFormats(TargetFormat.Deb, TargetFormat.Msi, TargetFormat.Dmg)
             packageName = "Riff Buddy"
             packageVersion = appVersion
@@ -120,8 +133,6 @@ compose.desktop {
 
 // Each installer is built on its own OS and carries only what that OS and
 // processor use: these name the folders inside the native-library jars.
-val hostOs = System.getProperty("os.name").lowercase()
-val hostArm = System.getProperty("os.arch").lowercase().let { "aarch64" in it || "arm64" in it }
 val alphaSkiaNatives = when {
     "win" in hostOs -> libs.alphaskia.windows
     "mac" in hostOs -> libs.alphaskia.macos
@@ -234,10 +245,14 @@ tasks.register<JavaExec>("screenshots") {
     args = (providers.gradleProperty("shots").orNull ?: "build/shots 1100x820 shot:home").split(" ")
 }
 
-// Remakes the installers' icons from the master SVG. Run after changing the
-// icon, and commit desktop/icons/.
+// Remakes the installers' icons and the launch splash from the master SVGs.
+// Run after changing the icon, and commit desktop/icons/ and desktop/launch/.
 tasks.register<JavaExec>("icons") {
     classpath = sourceSets.test.get().runtimeClasspath
     mainClass = "com.riffbuddy.desktop.IconToolKt"
-    args = listOf(file("../icon/variation-a-body.svg").path, file("icons").path)
+    args = listOf(
+        file("../icon/variation-a-body.svg").path, file("icons").path,
+        file("src/main/resources/icon/foreground.svg").path, file("launch/common").path,
+        file("src/main/resources/icon/window").path,
+    )
 }

@@ -27,7 +27,8 @@ import javax.swing.SwingUtilities
  *   steps:  shot:NAME   click:X,Y   wait:MS   drop:PATH (as if dragged onto the window)
  *
  * The app runs against a fresh database in <out-dir>/data, so nothing real is
- * touched.
+ * touched. Motion is off, so screens are caught at rest; set RIFF_MOTION=1 to
+ * catch the opening animation instead.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 fun main(args: Array<String>) {
@@ -57,9 +58,12 @@ fun main(args: Array<String>) {
         SwingUtilities.invokeAndWait { result = runCatching(block) }
         return result!!.getOrThrow()
     }
+    val motion = System.getenv("RIFF_MOTION")
     val scene = onUi { ImageComposeScene(w, h, Density(1f)) {
-        RiffBuddyTheme(condensedFont = condensed, systemReducedMotion = true) {
-            CompositionLocalProvider(LocalPlatform provides platform) { RiffBuddyContent(services) }
+        RiffBuddyTheme(condensedFont = condensed, systemReducedMotion = motion == null) {
+            CompositionLocalProvider(LocalPlatform provides platform) {
+                RiffBuddyContent(services, overlay = { com.riffbuddy.ui.Intro() })
+            }
         }
     } }
     val start = System.nanoTime()

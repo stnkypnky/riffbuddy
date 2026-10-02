@@ -1,8 +1,5 @@
 package com.riffbuddy.ui
 
-import android.content.Context
-import android.os.Build
-import android.view.accessibility.AccessibilityManager
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -25,6 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -33,9 +31,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.PathOperation
+import androidx.compose.ui.graphics.PathSegment
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.asAndroidPath
-import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
@@ -43,28 +41,29 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.riffbuddy.R
 import com.riffbuddy.ui.theme.LocalReducedMotion
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.exp
 import kotlin.math.sin
 
-/** The intro's length. The player asked for three to five seconds. */
+/** The intro's length: long enough to be seen, short enough to wait through every day. */
 private const val TOTAL_MS = 3800
+
+/** A frame within this long of the last one counts as steady: 20 frames a second. */
+private const val STEADY_FRAME_NANOS = 50_000_000L
 
 /**
  * The opening animation, drawn over the app while Home loads
  * underneath it.
  *
- * It starts where the system splash ends: the same icon, the same size, on
- * the same charcoal, so there is no jump between the two. Then:
+ * It starts where the launch splash ends (the system's on Android, Java's on
+ * a desktop): the same icon, the same size, on the same charcoal, so there is
+ * no jump between the two. Then:
  * - an amber outline traces the guitar while a glow warms up behind it (0–1 s);
  * - six strings draw down the neck and are plucked low to high (1–1.9 s);
  * - the name rises in underneath (1.6–2.4 s);
@@ -72,12 +71,12 @@ private const val TOTAL_MS = 3800
  *
  * **Cheap on purpose.** One clock drives everything, and it's read only inside
  * draw blocks and layer blocks. So each frame redraws; nothing recomposes,
- * measures or lays out. A few path segments a frame is nothing, even on the
- * Fire.
+ * measures or lays out. A few path segments a frame is nothing, even on a
+ * slow tablet.
  *
- * A tap skips it. It never plays with "Remove animations" (reduced motion) or
- * with TalkBack on: a silent animation is only a delay to someone who can't see
- * it.
+ * A tap skips it. It never plays with the system's reduced-motion setting on
+ * or a screen reader running: a silent animation is only a delay to someone
+ * who can't see it.
  */
 @Composable
 fun Intro() {
@@ -85,11 +84,9 @@ fun Intro() {
     SideEffect { IntroGate.showing = showing }
     if (!showing) return
 
-    val context = LocalContext.current
+    val platform = com.riffbuddy.platform.LocalPlatform.current
     val reduced = LocalReducedMotion.current
-    val talkBack = remember {
-        (context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager)?.isTouchExplorationEnabled == true
-    }
+    val talkBack = remember { platform.screenReaderOn }
     SideEffect { IntroGate.played = true }
     if (reduced || talkBack) {
         SideEffect { showing = false }
@@ -102,6 +99,20 @@ fun Intro() {
     var skipping by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
+        // The clock waits until frames arrive steadily. A window's first frames
+        // can take most of a second (fonts, graphics) and the very first frame
+        // time can be far off; a clock started then would play the whole intro
+        // unseen. Until then the first frame holds: the icon on charcoal, the
+        // same picture the launch splash showed.
+        var previous = withFrameNanos { it }
+        var steady = 0
+        var waited = 0
+        while (steady < 2 && waited < 90) {
+            val now = withFrameNanos { it }
+            steady = if (now - previous in 1..STEADY_FRAME_NANOS) steady + 1 else 0
+            previous = now
+            waited++
+        }
         clock.animateTo(TOTAL_MS / 1000f, tween(TOTAL_MS, easing = LinearEasing))
         showing = false
     }
@@ -112,10 +123,10 @@ fun Intro() {
     val bg = MaterialTheme.colorScheme.background
     val amber = MaterialTheme.colorScheme.primary
     val stringColor = MaterialTheme.colorScheme.onSurface
-    val icon = painterResource(R.drawable.ic_launcher_foreground)
+    val icon = platform.appIcon()
     // The size the system splash drew the icon at, so the handover doesn't jump:
     // Android 12+ uses 240 dp for the animated icon; our own launch window, 220.
-    val iconDp = if (Build.VERSION.SDK_INT >= 31) 240.dp else 220.dp
+    val iconDp = platform.launchIconDp.dp
     val contours = remember { outlineContours() }
 
     Box(
@@ -245,20 +256,27 @@ private fun phase(t: Float, start: Float, end: Float, ease: (Float) -> Float = {
  * walks a single contour at a time.
  */
 private fun outlineContours(): List<Path> {
-    fun parse(d: String) = PathParser().parsePathString(d).toPath().asAndroidPath()
-    val silhouette = parse(GUITAR_CONTOURS[0]).apply {
-        op(parse(GUITAR_CONTOURS[1]), android.graphics.Path.Op.UNION)
-        op(parse(GUITAR_CONTOURS[2]), android.graphics.Path.Op.UNION)
-    }
+    fun parse(d: String) = PathParser().parsePathString(d).toPath()
+    val neckAndUpper = Path.combine(PathOperation.Union, parse(GUITAR_CONTOURS[0]), parse(GUITAR_CONTOURS[1]))
+    val silhouette = Path.combine(PathOperation.Union, neckAndUpper, parse(GUITAR_CONTOURS[2]))
+    return splitContours(silhouette) + parse(GUITAR_CONTOURS[3])
+}
+
+/** One path per contour: a new contour starts at every move. */
+private fun splitContours(path: Path): List<Path> {
     val contours = mutableListOf<Path>()
-    val measure = android.graphics.PathMeasure(silhouette, false)
-    do {
-        val one = android.graphics.Path()
-        measure.getSegment(0f, measure.length, one, true)
-        one.close()
-        contours += one.asComposePath()
-    } while (measure.nextContour())
-    contours += parse(GUITAR_CONTOURS[3]).asComposePath()
+    var current: Path? = null
+    for (segment in path) {
+        val p = segment.points
+        when (segment.type) {
+            PathSegment.Type.Move -> current = Path().also { it.moveTo(p[0], p[1]); contours += it }
+            PathSegment.Type.Line -> current?.lineTo(p[2], p[3])
+            PathSegment.Type.Quadratic -> current?.quadraticTo(p[2], p[3], p[4], p[5])
+            PathSegment.Type.Cubic -> current?.cubicTo(p[2], p[3], p[4], p[5], p[6], p[7])
+            PathSegment.Type.Close -> current?.close()
+            else -> {}
+        }
+    }
     return contours
 }
 

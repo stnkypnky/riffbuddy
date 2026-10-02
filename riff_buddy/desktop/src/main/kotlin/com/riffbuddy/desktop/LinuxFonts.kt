@@ -53,6 +53,17 @@ object LinuxFonts {
         if (ok != 0) AppLog.w("RiffFonts", "could not set FONTCONFIG_FILE; font setup may be slow on this system")
     }
 
+    /**
+     * Has Skia read the fonts now, while the splash is showing. The first
+     * start builds the font cache, a few seconds' work; done here, it happens
+     * behind the splash instead of in an empty window.
+     */
+    fun warmUp() {
+        if (!System.getProperty("os.name").lowercase().contains("linux")) return
+        runCatching { org.jetbrains.skia.FontMgr.default.matchFamilyStyle("sans-serif", org.jetbrains.skia.FontStyle.NORMAL) }
+            .onFailure { AppLog.w("RiffFonts", "font warm-up failed: ${it.message}") }
+    }
+
     private fun StringBuilder.alias(generic: String, vararg families: String) {
         appendLine("  <alias><family>$generic</family><prefer>")
         families.forEach { appendLine("    <family>$it</family>") }

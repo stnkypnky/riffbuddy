@@ -16,7 +16,7 @@ import java.io.File
  * ICO for Windows and an ICNS for macOS. Not a test: run it when the icon
  * changes, and commit what it writes.
  *
- *   IconTool <master.svg> <out-dir>
+ *   IconTool <master.svg> <out-dir> [<foreground.svg> <splash-dir> [<window-icon-dir>]]
  *
  * The master is a full square, as Android's adaptive icons are. Desktops
  * expect a rounded square with a little margin, the shape macOS draws its
@@ -36,7 +36,49 @@ fun main(args: Array<String>) {
             .map { (type, size) -> type to png.getValue(size) }),
     )
     println("icons written to $out")
+    if (args.size >= 4) splash(File(args[2]).readBytes(), File(args[3]))
+    // The running window's own icons, one per size: the system picks the one
+    // it needs for the title bar, the taskbar and the window switcher.
+    if (args.size >= 5) {
+        val window = File(args[4]).apply { mkdirs() }
+        for (size in WINDOW_SIZES) File(window, "riffbuddy-$size.png").writeBytes(png.getValue(size))
+        println("window icons written to $window")
+    }
 }
+
+/**
+ * The launch splash: the guitar on the app's charcoal, as Android's system
+ * splash shows it. The window opens centered over it, and the opening
+ * animation's first frame is this same picture at the same size, so the
+ * handover doesn't jump. A @2x copy is used on high-density screens.
+ */
+private fun splash(foreground: ByteArray, out: File) {
+    out.mkdirs()
+    for ((name, scale) in listOf("splash.png" to 1, "splash@2x.png" to 2)) {
+        val side = SPLASH_SIDE * scale
+        val icon = SPLASH_ICON * scale.toFloat()
+        val surface = Surface.makeRasterN32Premul(side, side)
+        val canvas = surface.canvas
+        canvas.clear(0xFF241F1B.toInt())
+        canvas.save()
+        canvas.translate((side - icon) / 2f, (side - icon) / 2f)
+        val dom = SVGDOM(Data.makeFromBytes(foreground))
+        dom.root!!.width = SVGLength(icon, SVGLengthUnit.PX)
+        dom.root!!.height = SVGLength(icon, SVGLengthUnit.PX)
+        dom.setContainerSize(icon, icon)
+        dom.render(canvas)
+        canvas.restore()
+        File(out, name).writeBytes(surface.makeImageSnapshot().encodeToData(EncodedImageFormat.PNG)!!.bytes)
+    }
+    println("splash written to $out")
+}
+
+/** The sizes the running window offers the system. */
+val WINDOW_SIZES = listOf(16, 24, 32, 48, 64, 128, 256)
+
+/** Splash window and icon sizes, in dp; the icon matches the opening animation's. */
+private const val SPLASH_SIDE = 420
+private const val SPLASH_ICON = 220
 
 private fun render(svg: ByteArray, size: Int): ByteArray {
     val surface = Surface.makeRasterN32Premul(size, size)
