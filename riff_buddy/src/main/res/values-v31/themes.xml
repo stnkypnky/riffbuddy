@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+         the spec on Android 12+: the system splash, given the icon and the
+         app's charcoal instead of its default white-on-accent.
+    -->
+    <style name="Theme.RiffBuddy.Launch" parent="Theme.RiffBuddy">
+        <item name="android:windowSplashScreenBackground">@color/rb_bg</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    </style>
+</resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    What the FileProvider may hand to another app (share a take).
+    Only the takes folder: never the database, never tab files, never keys.
+    A share grants read access to the one file named, for as long as the
+    receiving app holds it.
+-->
+<paths>
+    <files-path name="takes" path="recordings/" />
+    <!-- Named copies of takes, WAV or M4A, made just for sharing. -->
+    <cache-path name="exports" path="exports/" />
+</paths>

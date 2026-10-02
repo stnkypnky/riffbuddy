@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Only the handful of colors the platform needs outside Compose: the launch
+     window and the adaptive icon. The full palette lives in ui/theme/Theme.kt,
+     which is the single place to change it.
+-->
+<resources>
+    <color name="rb_bg">#241F1B</color>
+    <color name="rb_amber">#FFB43D</color>
+</resources>

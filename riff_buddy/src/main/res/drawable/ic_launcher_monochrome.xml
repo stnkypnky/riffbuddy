@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Themed-icon layer for Android 13 and newer (AC). One flat color, so
+     the silhouette is doing all the work — which is the real test of whether the
+     shape reads at 48 dp. Same paths and same winding as the foreground, so the
+     pickup is a genuine hole; this layer gets tinted whatever color the system
+     wallpaper decides, and a filled patch would tint along with everything else.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108"
+    android:tint="#FF000000">
+
+    <group
+        android:rotation="-35"
+        android:pivotX="54"
+        android:pivotY="54.25">
+
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M47.5,25 h13 v7 h-3.5 v26 h-6 v-26 h-3.5 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M41.5,63 a12.5,9 0 1,0 25,0 a12.5,9 0 1,0 -25,0 Z M39,74 a15,9.5 0 1,0 30,0 a15,9.5 0 1,0 -30,0 Z M47,58 h14 a1.5,1.5 0 0 1 1.5,1.5 v2 a1.5,1.5 0 0 1 -1.5,1.5 h-14 a1.5,1.5 0 0 1 -1.5,-1.5 v-2 a1.5,1.5 0 0 1 1.5,-1.5 Z" />
+    </group>
+</vector>

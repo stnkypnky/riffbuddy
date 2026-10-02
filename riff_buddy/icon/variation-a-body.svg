@@ -1,0 +1,35 @@
+<!-- Riff Buddy icon, variation A: body and neck. 108-unit viewBox to match the
+     Android adaptive icon. Safe zone is the central 66 units.
+
+     The body is two overlapping bouts, which is what gives it a waist — a single
+     ellipse read as a banjo. They share a winding direction so they union; the
+     pickup is wound the other way, which punches it clean through under the
+     default non-zero fill rule. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 108 108">
+  <defs>
+    <radialGradient id="ground" cx="0.42" cy="0.36" r="0.78">
+      <stop offset="0" stop-color="#2E2A26"/>
+      <stop offset="1" stop-color="#1B1A19"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#F5A623" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#F5A623" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFC24A"/>
+      <stop offset="1" stop-color="#E08A00"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="108" height="108" fill="url(#ground)"/>
+  <circle cx="50" cy="46" r="42" fill="url(#glow)"/>
+
+  <g transform="rotate(-35 54 54.25)" fill="url(#amber)">
+    <!-- Headstock and neck in one stroke. The length is what says "guitar". -->
+    <path d="M47.5,25 h13 v7 h-3.5 v26 h-6 v-26 h-3.5 Z"/>
+    <!-- Upper bout, lower bout, and the pickup cut through both. -->
+    <path d="M41.5,63 a12.5,9 0 1,0 25,0 a12.5,9 0 1,0 -25,0 Z
+             M39,74 a15,9.5 0 1,0 30,0 a15,9.5 0 1,0 -30,0 Z
+             M47,58 h14 a1.5,1.5 0 0 1 1.5,1.5 v2 a1.5,1.5 0 0 1 -1.5,1.5 h-14 a1.5,1.5 0 0 1 -1.5,-1.5 v-2 a1.5,1.5 0 0 1 1.5,-1.5 Z"/>
+  </g>
+</svg>

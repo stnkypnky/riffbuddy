@@ -1,0 +1,28 @@
+<!-- Riff Buddy icon, variation B: headstock and tuners. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 108 108">
+  <defs>
+    <radialGradient id="ground" cx="0.42" cy="0.36" r="0.78">
+      <stop offset="0" stop-color="#2E2A26"/>
+      <stop offset="1" stop-color="#1B1A19"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#F5A623" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#F5A623" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFC24A"/>
+      <stop offset="1" stop-color="#E08A00"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="108" height="108" fill="url(#ground)"/>
+  <circle cx="50" cy="46" r="42" fill="url(#glow)"/>
+
+  <g transform="rotate(-28 54 58)" fill="url(#amber)">
+    <path fill-rule="evenodd"
+          d="M42,30 h24 v28 a6,6 0 0 1 -6,6 h-1.5 v22 h-9 v-22 h-1.5 a6,6 0 0 1 -6,-6 Z
+             M52,37 a3.5,3.5 0 1,0 -7,0 a3.5,3.5 0 1,0 7,0 Z
+             M52,47 a3.5,3.5 0 1,0 -7,0 a3.5,3.5 0 1,0 7,0 Z
+             M52,57 a3.5,3.5 0 1,0 -7,0 a3.5,3.5 0 1,0 7,0 Z"/>
+  </g>
+</svg>

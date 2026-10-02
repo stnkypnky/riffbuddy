@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+         The launch theme, which is all the system sees before Compose draws.
+         Dark with the app's own charcoal background (the rb-bg token) so a cold
+         start does not flash white in a dim practice room. The Compose theme in
+         ui/theme/Theme.kt is the real one.
+    -->
+    <style name="Theme.RiffBuddy" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/rb_bg</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+
+    <!--
+         The theme the activity starts in. Its window background is the
+         splash; MainActivity switches to Theme.RiffBuddy before drawing, so the
+         icon is not left behind the app once it is up.
+    -->
+    <style name="Theme.RiffBuddy.Launch" parent="Theme.RiffBuddy">
+        <item name="android:windowBackground">@drawable/splash</item>
+    </style>
+</resources>

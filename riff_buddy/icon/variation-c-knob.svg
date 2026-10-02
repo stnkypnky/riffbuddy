@@ -1,0 +1,29 @@
+<!-- Riff Buddy icon, variation C: a knob already dialled in.
+
+     The pointer sits off vertical on purpose. At 12 o'clock the shape read as a
+     face; turned, it reads as a control someone has set — which is the app's
+     whole pitch. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 108 108">
+  <defs>
+    <radialGradient id="ground" cx="0.42" cy="0.36" r="0.78">
+      <stop offset="0" stop-color="#2E2A26"/>
+      <stop offset="1" stop-color="#1B1A19"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#F5A623" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#F5A623" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFC24A"/>
+      <stop offset="1" stop-color="#E08A00"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="108" height="108" fill="url(#ground)"/>
+  <circle cx="50" cy="46" r="42" fill="url(#glow)"/>
+
+  <g transform="rotate(38 54 54)" fill="url(#amber)">
+    <path d="M28,54 a26,26 0 1,0 52,0 a26,26 0 1,0 -52,0 Z
+             M50.5,36.5 a3.5,3.5 0 0 1 7,0 v10 a3.5,3.5 0 0 1 -7,0 Z"/>
+  </g>
+</svg>

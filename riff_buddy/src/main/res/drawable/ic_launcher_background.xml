@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Charcoal with a warm radial glow, like a tube lit inside an amp head
+     (the spec). Amber is the app's accent, so the glow is the background's only
+     color — the foreground carries the shape.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="45" android:centerY="39"
+                android:gradientRadius="84">
+                <item android:offset="0.0" android:color="#FF2E2A26" />
+                <item android:offset="1.0" android:color="#FF1B1A19" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- The glow itself, kept faint so the silhouette stays the loudest thing. -->
+    <path android:pathData="M50,46 m-42,0 a42,42 0 1,0 84,0 a42,42 0 1,0 -84,0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="50" android:centerY="46"
+                android:gradientRadius="42">
+                <item android:offset="0.0" android:color="#38F5A623" />
+                <item android:offset="1.0" android:color="#00F5A623" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- The AI providers, and nothing else. Every tool works in airplane mode. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!--
+         Declared here, requested at the moment the tuner is first opened —
+         never during onboarding. A microphone prompt on a first launch,
+         before the app has shown what it does, is the kind of thing people
+         deny once and then have to be talked through re-enabling.
+    -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- reminders. Notifications are asked for only when reminders are
+         turned on (Android 13+); boot is heard only to re-arm the one alarm. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!--
+         Android 11 and later hide other installed apps unless they are declared
+         here. Without this, handing a tab link straight to the Songsterr app
+         fails as though the app were not installed — which is exactly what it
+         looked like: the link opened in a browser despite the app being present
+         and verified for the domain.
+    -->
+    <queries>
+        <package android:name="com.songsterr" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+
+    <!-- A phone without a microphone can still be a metronome and a songbook. -->
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
+    <!--
+         allowBackup is off, and that is a real trade-off rather than a default.
+         The database holds the practice log and the gear profile, and secure
+         storage holds the API keys; Android auto-backup would copy the former
+         to Google's cloud, which the spec puts out of scope and section
+         11.5 contradicts outright ("no cloud is involved").
+
+         The cost is that uninstalling or clearing app data loses everything
+         (risk R10). The answer to that is the export/import plus the 30-day
+         backup reminder, not silently shipping the log off the device.
+    -->
+    <application
+        android:name=".RiffBuddyApp"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.RiffBuddy">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.RiffBuddy.Launch"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <receiver
+            android:name=".reminders.ReminderReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".reminders.RearmReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- sharing a take. Limited by res/xml/file_paths.xml to the
+             takes folder alone. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.takes"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+
+</manifest>

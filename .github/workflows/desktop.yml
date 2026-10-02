@@ -1,0 +1,73 @@
+# Builds Riff Buddy's desktop installers: a .deb for Debian, Ubuntu and their
+# relatives, an .msi for Windows, and a .dmg for Apple Silicon Macs.
+#
+# Runs when a version tag (v0.1.0, v0.2.0, ...) is pushed, or by hand from the
+# Actions tab. A tag also gathers the three installers into a draft release
+# to look over before publishing; a run by hand leaves them as downloads on
+# the run's page.
+name: Desktop installers
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The oldest supported Ubuntu, on purpose: a .deb names the system
+          # libraries it needs as they're called where it was built, and the
+          # older names are still provided by every newer release.
+          - os: ubuntu-22.04
+            task: packageDeb
+            installer: riff_buddy/desktop/build/compose/binaries/main/deb/*.deb
+          - os: windows-latest
+            task: packageMsi
+            installer: riff_buddy/desktop/build/compose/binaries/main/msi/*.msi
+          # Apple Silicon.
+          - os: macos-14
+            task: packageDmg
+            installer: riff_buddy/desktop/build/compose/binaries/main/dmg/*.dmg
+    runs-on: ${{ matrix.os }}
+    env:
+      # The desktop edition alone: no Android SDK or signing key needed.
+      RIFFBUDDY_DESKTOP_ONLY: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Test
+        if: runner.os == 'Linux'
+        shell: bash
+        run: ./gradlew :desktop:test
+      - name: Build the installer
+        shell: bash
+        run: ./gradlew :desktop:${{ matrix.task }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: riffbuddy-${{ runner.os }}
+          path: ${{ matrix.installer }}
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: installers
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: installers/*

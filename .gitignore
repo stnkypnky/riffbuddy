@@ -1,0 +1,22 @@
+# Gradle and build output
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+*.apk
+*.aab
+*.deb
+*.msi
+*.dmg
+
+# Machine and signing configuration: never commit
+local.properties
+keystore.properties
+*.jks
+*.keystore
+.env
+
+# Editors
+.idea/
+*.iml
+.vscode/
+.DS_Store

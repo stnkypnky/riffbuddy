@@ -1,0 +1,41 @@
+// A twelve-bar study in E minor pentatonic, written for Riff Buddy.
+// Original material, released with the app under its own terms; nothing here is
+// transcribed from a recording. Two tracks so mute, solo and volume have
+// something to act on, and twelve bars so a loop over bars 5-8 sits in the
+// middle rather than at an edge.
+\title "Pentatonic Study"
+\subtitle "E minor, two tracks"
+\artist "Riff Buddy"
+\tempo 96
+.
+\track "Guitar"
+\staff {score tabs}
+\instrument 30
+:8 0.6 3.6 0.5 2.5 0.4 2.4 0.5 2.5 |
+:8 0.6 3.6 0.5 2.5 0.4 2.4 3.3 2.4 |
+:8 0.6 3.6 0.5 2.5 0.4 2.4 0.5 2.5 |
+:4 0.6 3.6 0.5 r |
+:8 3.3 0.3 2.4 0.4 2.4 0.4 2.5 0.5 |
+:8 3.3 0.3 2.4 0.4 2.5 0.5 3.6 0.6 |
+:8 3.3 0.3 2.4 0.4 2.4 0.4 2.5 0.5 |
+:2 (0.6 2.5 2.4) (0.6 2.5 2.4) |
+:16 0.1 3.1 0.1 3.1 0.2 3.2 0.2 3.2 0.3 2.3 0.3 2.3 0.4 2.4 0.4 2.4 |
+:16 0.1 3.1 0.1 3.1 0.2 3.2 0.2 3.2 0.3 2.3 0.3 2.3 2.4 0.4 2.5 0.5 |
+:8 0.6 3.6 0.5 2.5 0.4 2.4 0.5 2.5 |
+:1 (0.6 2.5 2.4 0.3) |
+\track "Bass"
+\staff {tabs}
+\instrument 33
+\tuning g2 d2 a1 e1
+:4 0.4 0.4 3.4 0.4 |
+:4 0.4 0.4 3.4 5.3 |
+:4 0.4 0.4 3.4 0.4 |
+:4 0.4 3.4 0.3 r |
+:4 3.4 3.4 5.4 5.4 |
+:4 3.4 3.4 0.3 0.4 |
+:4 3.4 3.4 5.4 5.4 |
+:2 0.4 0.4 |
+:4 0.4 0.4 0.4 0.4 |
+:4 0.4 0.4 3.4 5.3 |
+:4 0.4 0.4 3.4 0.4 |
+:1 0.4 |
