@@ -1,5 +1,7 @@
 package com.riffbuddy.ui
 
+import androidx.compose.foundation.layout.FlowRow
+
 import androidx.compose.foundation.layout.Arrangement
 
 import androidx.compose.foundation.rememberScrollState
@@ -79,26 +81,20 @@ fun SectionHeader(text: String, modifier: Modifier = Modifier) {
     }
 }
 
-/**
- * The seven tools, each chip with its icon. Used by the Tools tab and the tuner,
- * which draws its own. Wraps onto a second line on a phone rather than
- * scrolling, so every tool can be seen.
- */
+/** The seven tools, each chip with its icon: drawn once by the shell, above whichever tool is showing. */
 @Composable
 fun ToolChips(current: Tool, onPick: (Tool) -> Unit) {
-    // One centered row that never wraps. Wrapping made the chips jump as the
-    // tools changed, because each tool's screen is a different width; centered,
-    // they sit in the same place on every tool. Where the row is wider than the
-    // screen (a phone held upright) it scrolls sideways instead. The "?" sits at
-    // the end, outside the row, and follows the tool that's showing.
-    Box(Modifier.fillMaxWidth().padding(top = 12.dp)) {
-        Row(
-            Modifier.align(Alignment.Center)
-                .padding(start = 8.dp, end = 52.dp)
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+    // Centered, and wrapping onto a second line only where the screen is too
+    // narrow for one (a phone held upright). The shell draws this row across
+    // the full width above every tool, so where it wraps depends on the screen
+    // alone and the chips stay put as the tools change. The "?" sits at the
+    // end and follows the tool that's showing.
+    Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 12.dp)) {
+        FlowRow(
+            Modifier.weight(1f).padding(top = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Spacer(Modifier.width(8.dp))
             Tool.entries.forEach { tool ->
                 FilterChip(
                     selected = tool == current,
@@ -109,6 +105,6 @@ fun ToolChips(current: Tool, onPick: (Tool) -> Unit) {
                 )
             }
         }
-        Box(Modifier.align(Alignment.CenterEnd).padding(end = 8.dp)) { HelpButton(helpTopicFor(current)) }
+        HelpButton(helpTopicFor(current))
     }
 }

@@ -131,7 +131,7 @@ class DesktopAudioInputs : AudioInputs {
         val devices = AudioSystem.getMixerInfo().withIndex().filter { (_, info) ->
             // The system default is offered once, as "Default input", not again
             // under the sound server's own name for it.
-            !info.name.contains("[default]") && runCatching {
+            !isDefaultAlias(info.name) && runCatching {
                 AudioSystem.getMixer(info).isLineSupported(DataLine.Info(TargetDataLine::class.java, probe))
             }.getOrDefault(false)
         }
@@ -144,18 +144,6 @@ class DesktopAudioInputs : AudioInputs {
             }
     }
 
-    /**
-     * Java names a Linux device after its ALSA address ("PCH [plughw:0,0]") and
-     * describes it readably ("Direct Audio Device: HDA Intel PCH, ALC3253
-     * Analog, ..."). The description's first two parts are what a person
-     * recognizes; other systems already give a readable name.
-     */
-    private fun readableName(name: String, description: String): String {
-        if (!description.startsWith("Direct Audio Device:")) return name
-        val parts = description.substringAfter(":").split(",").map { it.trim() }.filter { it.isNotEmpty() }.distinct()
-        return parts.take(2).joinToString(" · ").ifBlank { name }
-    }
-
     override fun open(sampleRate: Int, bufferBytes: Int, inputId: Int?): PcmInput {
         val format = AudioFormat(sampleRate.toFloat(), 16, 1, true, false)
         val info = DataLine.Info(TargetDataLine::class.java, format)
@@ -166,8 +154,29 @@ class DesktopAudioInputs : AudioInputs {
         return DesktopPcmInput(line)
     }
 
-    private companion object {
+    internal companion object {
         val AMP_NAMES = listOf("Mustang", "Fender", "Katana", "Spark")
+
+        /** Linux's "default [default]"; Windows' "Primary Sound Capture Driver". */
+        fun isDefaultAlias(name: String): Boolean =
+            name.contains("[default]") || name.startsWith("Primary Sound Capture Driver")
+
+        /**
+         * Java names a Linux device after its ALSA address ("PCH [plughw:0,0]") and
+         * describes it readably ("Direct Audio Device: HDA Intel PCH, ALC3253
+         * Analog, ..."); the description's first two parts are what a person
+         * recognizes. Windows is the other way round: the name is the device
+         * ("Microphone (Elgato Wave:3)") and every description is the same
+         * "Direct Audio Device: DirectSound Capture", so the name is kept there,
+         * as on macOS.
+         */
+        fun readableName(name: String, description: String): String {
+            if (!ALSA_ADDRESS.containsMatchIn(name) || !description.startsWith("Direct Audio Device:")) return name
+            val parts = description.substringAfter(":").split(",").map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+            return parts.take(2).joinToString(" · ").ifBlank { name }
+        }
+
+        private val ALSA_ADDRESS = Regex("""\[(plug)?hw:[^\]]*]""")
     }
 }
 
