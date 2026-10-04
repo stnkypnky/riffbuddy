@@ -36,6 +36,14 @@ import java.util.prefs.Preferences
 
 /** Riff Buddy on a desktop computer: the same app as on Android, in a window. */
 fun main() {
+    // Skia draws with Direct3D on Windows by default, and on a fast 4K
+    // display the window flickered on hover, on cards and whenever a dialog
+    // opened; OpenGL drew it cleanly. Set here rather than as a launcher
+    // flag so it holds however the app is started, before the first window,
+    // and only when no renderer was asked for, so another can still be tried.
+    if ("win" in System.getProperty("os.name").lowercase() && System.getProperty("skiko.renderApi") == null) {
+        System.setProperty("skiko.renderApi", "OPENGL")
+    }
     val dataDir = DesktopPaths.data.apply { mkdirs() }
     val cacheDir = DesktopPaths.cache.apply { mkdirs() }
     AppIdentity.apply()
