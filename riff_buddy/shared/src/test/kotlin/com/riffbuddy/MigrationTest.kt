@@ -118,6 +118,41 @@ class MigrationTest {
         assertEquals("Mustang LT25", db.single("SELECT model FROM amps"))
     }
 
+    /** v11: custom shapes arrive as an empty table, and everything else stays. */
+    @Test
+    fun `v11 adds custom shapes without touching anything`() {
+        val db = database()
+        Schema.V1.forEach { db.run(it) }
+        db.upgrade(from = 1, to = 10)
+        db.run("INSERT INTO amps (name, make, model, type, controls_json, notes) VALUES ('LT25', 'Fender', 'Mustang LT25', 'modeling', '[]', '')")
+        db.upgrade(from = 10)
+        assertEquals(0, db.count("custom_shapes"))
+        assertEquals("Mustang LT25", db.single("SELECT model FROM amps"))
+        db.run("INSERT INTO custom_shapes (name, kind, root, notes, created_at, updated_at) VALUES ('Mine', 'SCALE', 9, '0,2,4,7,9', 1, 1)")
+        assertEquals("0,2,4,7,9", db.single("SELECT notes FROM custom_shapes"))
+    }
+
+    @Test
+    fun `v12 notes deletions, cascades included, and a changed start time`() {
+        val db = v1WithData()
+        db.upgrade(from = 1)
+        db.run("INSERT INTO song_parts (song_id, name, created_at, updated_at) VALUES (1, 'Outro', 77, 77)")
+        val before = System.currentTimeMillis()
+        db.run("DELETE FROM songs WHERE id = 1")
+        assertEquals("1", db.single("SELECT identity FROM deletions WHERE table_name = 'songs'"))
+        assertEquals("a part deleted with its song is noted too", "77",
+            db.single("SELECT identity FROM deletions WHERE table_name = 'song_parts'"))
+        val at = (db.single("SELECT deleted_at FROM deletions WHERE table_name = 'songs'") as Number).toLong()
+        assertTrue("noted in epoch millis: $at", at in before - 1000..System.currentTimeMillis() + 1000)
+
+        // A start time corrected in the log is a new session to another device.
+        db.run("UPDATE sessions SET started_at = 5000, updated_at = 6000 WHERE id = 1")
+        assertEquals("1000", db.single("SELECT identity FROM deletions WHERE table_name = 'sessions'"))
+        db.run("UPDATE sessions SET rating = 5 WHERE id = 1")
+        assertEquals("other edits note nothing", 1, (db.single("SELECT COUNT(*) FROM deletions WHERE table_name = 'sessions'") as Number).toInt())
+        assertEquals("the session kept its items", 1, db.count("session_items"))
+    }
+
     /** Deleting a song keeps its tab file, unlinked, rather than losing an import. */
     @Test
     fun `deleting a song unlinks its tab file instead of deleting it`() {

@@ -1,5 +1,8 @@
 package com.riffbuddy.ui.backing
 
+import com.riffbuddy.ui.Shortcut
+import com.riffbuddy.ui.KeyShortcuts
+import androidx.compose.ui.input.key.Key
 import com.riffbuddy.ui.tabs.NotesChip
 
 import androidx.compose.foundation.horizontalScroll
@@ -129,6 +132,13 @@ fun BackingScreen(
         }
         onDispose { player.onReady = null }
     }
+
+    val ready = player.ready
+    KeyShortcuts(
+        "Backing track",
+        if (!ready) null else Shortcut("Space", "Play or pause", listOf(Key.Spacebar)) { player.playPause() },
+        if (!ready) null else Shortcut("Home", "Stop, back to the start", listOf(Key.MoveHome)) { player.stop() },
+    )
 
     Column(Modifier.fillMaxSize()) {
         header()
@@ -319,11 +329,10 @@ private fun WhatToPlay(spec: BackingSpec, score: BackingScore, player: TabPlayer
                 }
             }
             FretboardDiagram(
-                positions = Fretboard.positions(tuning, spec.keyTonic, scale, 12),
+                positions = Fretboard.positions(tuning, spec.keyTonic, scale),
                 stringCount = tuning.stringCount,
                 openNotes = tuning.noteNames().map { it.dropLast(1) },
                 label = DotLabel.FRET,
-                maxFret = 12,
                 emphasis = chord?.let { it.quality.pitchClasses(it.root) },
             )
         }

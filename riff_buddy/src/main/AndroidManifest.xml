@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- The AI providers, and nothing else. Every tool works in airplane mode. -->
+    <!-- The AI providers, and syncing with the player's other devices on the same
+         Wi-Fi. Every tool works in airplane mode. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Lets sync's "here I am" (multicast and broadcast) in while the app is open. A normal
+         permission: granted at install, never asked for. -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
 
     <!--
          Declared here, requested at the moment the tuner is first opened —

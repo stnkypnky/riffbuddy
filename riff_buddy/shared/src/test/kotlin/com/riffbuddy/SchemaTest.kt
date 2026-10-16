@@ -59,7 +59,9 @@ class SchemaTest {
      */
     @Test
     fun `timestamp columns are integers`() {
-        Regex("(\\w*_at)\\s+(\\w+)").findAll(sql).forEach { m ->
+        // Declarations only: a trigger's body names columns too ("CAST(x_at AS TEXT)").
+        val declarations = Schema.fresh().filterNot { it.trim().startsWith("CREATE TRIGGER") }.joinToString("\n")
+        Regex("(\\w*_at)\\s+(\\w+)").findAll(declarations).forEach { m ->
             assertEquals(
                 "${m.groupValues[1]} should be INTEGER epoch millis",
                 "INTEGER",
@@ -99,5 +101,26 @@ class SchemaTest {
             tables.toSet(),
             backedUp + excluded,
         )
+    }
+
+    /**
+     * A deletion reaches the other devices only if its table notes it. Every
+     * backed-up table whose items a merge can recognize (by a creation time,
+     * or its own override) needs a trigger; a new one added without it would
+     * have its deletions undone by the next sync.
+     */
+    @Test
+    fun `every recognizable table notes its deletions`() {
+        val triggers = Regex("CREATE TRIGGER (\\w+)_deleted AFTER DELETE ON (\\w+)").findAll(sql)
+            .map { it.groupValues[2] }.toSet()
+        val recognizable = Regex("CREATE TABLE (\\w+) \\(([^;]*?)\\n\\s*\\)", RegexOption.DOT_MATCHES_ALL).findAll(sql)
+            .filter { m ->
+                val table = m.groupValues[1]
+                table in com.riffbuddy.data.BackupFormat.TABLES &&
+                    (table in com.riffbuddy.data.BackupMerge.IDENTITY_OVERRIDES ||
+                        com.riffbuddy.data.BackupMerge.IDENTITY_COLUMNS.any { Regex("\\b$it\\b").containsMatchIn(m.groupValues[2]) })
+            }.map { it.groupValues[1] }.toSet()
+        assertTrue("found no tables to check", recognizable.size > 10)
+        assertEquals("tables whose deletions would not travel", emptySet<String>(), recognizable - triggers)
     }
 }

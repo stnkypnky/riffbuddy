@@ -23,6 +23,7 @@ class SessionRepo(private val db: Db) {
             put("started_at", now.toEpochMilli())
             put("mode", mode.name.lowercase())
             put("duration_sec", 0)
+            put("updated_at", now.toEpochMilli())
         }
         db.writableDatabase.insert("sessions", null, values)
     }
@@ -52,6 +53,7 @@ class SessionRepo(private val db: Db) {
             putNull("paused_at")
             if (rating != null) put("rating", rating) else putNull("rating")
             put("notes", notes)
+            put("updated_at", now.toEpochMilli())
         }
         db.writableDatabase.update("sessions", values, "id = ?", arrayOf(id.toString()))
     }
@@ -62,7 +64,7 @@ class SessionRepo(private val db: Db) {
      * still knows how long it had been practiced.
      */
     suspend fun pause(id: Long, now: Instant = Instant.now()): Unit = withContext(Dispatchers.IO) {
-        val values = SqlValues().apply { put("paused_at", now.toEpochMilli()) }
+        val values = SqlValues().apply { put("paused_at", now.toEpochMilli()); put("updated_at", now.toEpochMilli()) }
         db.writableDatabase.update("sessions", values, "id = ? AND paused_at IS NULL AND ended_at IS NULL", arrayOf(id.toString()))
     }
 
@@ -72,6 +74,7 @@ class SessionRepo(private val db: Db) {
         val values = SqlValues().apply {
             put("paused_seconds", session.pausedSeconds + pauseSoFar(session, now))
             putNull("paused_at")
+            put("updated_at", now.toEpochMilli())
         }
         db.writableDatabase.update("sessions", values, "id = ?", arrayOf(id.toString()))
     }
@@ -99,6 +102,7 @@ class SessionRepo(private val db: Db) {
             putNull("paused_at")
             if (rating != null) put("rating", rating) else putNull("rating")
             put("notes", notes)
+            put("updated_at", Instant.now().toEpochMilli())
         }
         db.writableDatabase.update("sessions", values, "id = ? AND ended_at IS NOT NULL", arrayOf(id.toString()))
     }
@@ -117,6 +121,7 @@ class SessionRepo(private val db: Db) {
             put("duration_sec", durationSeconds)
             if (rating != null) put("rating", rating) else putNull("rating")
             put("notes", notes)
+            put("updated_at", Instant.now().toEpochMilli())
         }
         db.writableDatabase.insert("sessions", null, values)
     }
@@ -137,7 +142,17 @@ class SessionRepo(private val db: Db) {
             put("notes", item.notes)
             if (item.partId != null) put("part_id", item.partId) else putNull("part_id")
         }
-        db.writableDatabase.insert("session_items", null, values)
+        db.writableDatabase.insert("session_items", null, values).also { touch(db.writableDatabase, item.sessionId) }
+    }
+
+    /**
+     * Marks a session changed. Its items have no time of their own, so a
+     * merge on another device carries them with the session, and only when
+     * the session says it is newer.
+     */
+    private fun touch(db: SqlDatabase, sessionId: Long) {
+        db.update("sessions", SqlValues().apply { put("updated_at", Instant.now().toEpochMilli()) },
+            "id = ?", arrayOf(sessionId.toString()))
     }
 
     /**
@@ -159,6 +174,7 @@ class SessionRepo(private val db: Db) {
                     put("notes", com.riffbuddy.domain.Tagging.MARK)
                 })
             }
+            touch(db, sessionId)
             db.setTransactionSuccessful()
         } finally {
             db.endTransaction()

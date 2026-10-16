@@ -99,8 +99,15 @@ object Fretboard {
         root: Int,
         scale: Scale,
         maxFret: Int = MAX_FRET,
+    ): List<FretPosition> = positions(tuning, root, scale.pitchClasses(root), maxFret)
+
+    /** Every note of a set of pitch classes on the neck: a scale of the player's own, or a built-in one. */
+    fun positions(
+        tuning: Tuning,
+        root: Int,
+        classes: Set<Int>,
+        maxFret: Int = MAX_FRET,
     ): List<FretPosition> {
-        val classes = scale.pitchClasses(root)
         return buildList {
             tuning.midi.forEachIndexed { stringIndex, openMidi ->
                 for (fret in 0..maxFret) {
@@ -138,12 +145,15 @@ object Fretboard {
      * Only meaningful for a pentatonic scale; anything else returns nothing
      * rather than inventing a shape that does not exist.
      */
-    fun pentatonicBoxes(tuning: Tuning, root: Int, scale: Scale): List<Position> {
-        if (!scale.isPentatonic || tuning.midi.isEmpty()) return emptyList()
-        val classes = scale.pitchClasses(root)
+    fun pentatonicBoxes(tuning: Tuning, root: Int, scale: Scale): List<Position> =
+        if (!scale.isPentatonic) emptyList() else pentatonicBoxes(tuning, root, scale.pitchClasses(root))
+
+    /** The boxes of any five-note set, numbered up the scale from [root]. */
+    fun pentatonicBoxes(tuning: Tuning, root: Int, classes: Set<Int>): List<Position> {
+        if (classes.size != 5 || tuning.midi.isEmpty()) return emptyList()
         val lowest = tuning.midi.first()
-        return scale.semitones.mapIndexed { index, offset ->
-            val startFret = (0..11).first { (lowest + it).mod(12) == (root + offset).mod(12) }
+        return classes.sortedBy { (it - root).mod(12) }.mapIndexed { index, pitchClass ->
+            val startFret = (0..11).first { (lowest + it).mod(12) == pitchClass }
             Position("Box ${index + 1}", walk(tuning, lowest + startFret, classes, perString = 2))
         }
     }
@@ -187,8 +197,11 @@ object Fretboard {
      * out of the pitches, so the jog at the B string — and any tuning's
      * equivalent — comes for free instead of being a special case.
      */
-    fun threeNotesPerString(tuning: Tuning, root: Int, scale: Scale): List<Position> {
-        val classes = scale.pitchClasses(root)
+    fun threeNotesPerString(tuning: Tuning, root: Int, scale: Scale): List<Position> =
+        threeNotesPerString(tuning, scale.pitchClasses(root))
+
+    /** The same for any seven-note set. */
+    fun threeNotesPerString(tuning: Tuning, classes: Set<Int>): List<Position> {
         if (classes.size != 7 || tuning.midi.isEmpty()) return emptyList()
         val lowest = tuning.midi.first()
         return classes.map { pitchClass ->
@@ -276,8 +289,10 @@ object Fretboard {
      * Each note stays on its string until it would need a reach past
      * the fourth fret of the position, then moves across.
      */
-    fun oneOctave(tuning: Tuning, root: Int, scale: Scale): Position {
-        val classes = scale.pitchClasses(root)
+    fun oneOctave(tuning: Tuning, root: Int, scale: Scale): Position =
+        oneOctave(tuning, root, scale.pitchClasses(root))
+
+    fun oneOctave(tuning: Tuning, root: Int, classes: Set<Int>): Position {
         val lowest = tuning.midi.first()
         val start = (0..11).first { (lowest + it).mod(12) == root.mod(12) }
         var string = 0
@@ -289,6 +304,18 @@ object Fretboard {
         }
         return Position("One octave", cells.toSet())
     }
+
+    /**
+     * [shapes] followed by each one again an octave up, where the whole of it
+     * still fits on the neck: a shape repeats every twelve frets, and on a
+     * 24-fret neck Box 1 of A minor is at the 17th as well as the 5th. A copy
+     * that would run off the end is left out rather than shown with holes.
+     * Lowest on the neck first, so stepping through them walks up the neck.
+     */
+    fun withOctaveUp(shapes: List<Position>, maxFret: Int = MAX_FRET): List<Position> =
+        (shapes + shapes.filter { p -> p.cells.all { it.second + 12 <= maxFret } }
+            .map { p -> Position(p.name, p.cells.map { (s, f) -> s to f + 12 }.toSet()) })
+            .sortedBy { it.frets.first }
 
     private val STANDARD_INTERVALS = listOf(5, 5, 5, 4, 5)
 

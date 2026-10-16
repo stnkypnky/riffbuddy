@@ -49,12 +49,22 @@ class BackupRepo(
         /** Rows added under a new id: this device had used theirs for something else. */
         val renumbered: Int = 0,
         val skipped: Int = 0,
+        /** Items deleted here because they were deleted on the other device. */
+        val removed: Int = 0,
+        /** Items in the backup not added because they were deleted here. */
+        val leftOut: Int = 0,
     )
 
     /** A backup read far enough to summarize, and not yet applied. */
     class Contents(val root: JSONObject, internal val zip: File)
 
-    suspend fun exportTo(output: OutputStream): Int = withContext(Dispatchers.IO) {
+    /**
+     * Writes the backup. [includeFile] picks which files go in, by their name
+     * in the zip (`tabs/…`, `recordings/…`): a sync leaves out the ones the
+     * other device already has, and the copy kept for undoing one leaves out
+     * all of them, since the files are still on disk.
+     */
+    suspend fun exportTo(output: OutputStream, includeFile: (String) -> Boolean = { true }): Int = withContext(Dispatchers.IO) {
         val database = db.readableDatabase
         val tables = JSONObject()
         var rowCount = 0
@@ -90,7 +100,7 @@ class BackupRepo(
                 val dir = fileDirs.getValue(folder)
                 storedNames(database, table).forEach { name ->
                     val file = File(dir, name)
-                    if (BackupFormat.isSafeStoredName(name) && file.isFile) {
+                    if (BackupFormat.isSafeStoredName(name) && file.isFile && includeFile(folder + name)) {
                         zip.putNextEntry(ZipEntry(folder + name))
                         file.inputStream().use { it.copyTo(zip) }
                         zip.closeEntry()
@@ -105,17 +115,39 @@ class BackupRepo(
         database.rawQuery("SELECT stored_name FROM $table", null)
             .use { c -> buildList { while (c.moveToNext()) add(c.requireString(0)) } }
 
+    /** The files this device holds that a backup would carry, by their name in the zip. */
+    suspend fun storedFiles(): Set<String> = withContext(Dispatchers.IO) {
+        val database = db.readableDatabase
+        BackupFormat.FILE_TABLES.flatMap { (table, folder) ->
+            val dir = fileDirs.getValue(folder)
+            storedNames(database, table).filter { File(dir, it).isFile }.map { folder + it }
+        }.toSet()
+    }
+
     /** Copies the backup to the cache and reads its manifest, applying nothing. */
     suspend fun inspect(input: InputStream): Result<Contents> = withContext(Dispatchers.IO) {
         val copy = File(cacheDir, "restore-${System.currentTimeMillis()}.zip")
         runCatching {
             copy.outputStream().use { input.copyTo(it) }
-            val text = ZipFile(copy).use { zip ->
-                val entry = zip.getEntry(BackupFormat.ENTRY_NAME) ?: error("No Riff Buddy data inside that file.")
-                zip.getInputStream(entry).use { it.readBytes().toString(Charsets.UTF_8) }
-            }
-            Contents(JSONObject(text), copy)
+            contentsOf(copy)
         }.onFailure { copy.delete() }
+    }
+
+    /**
+     * As [inspect], for a backup this app already wrote to its own storage
+     * (one received by a sync): read where it is rather than copied, and
+     * deleted once applied or discarded, like a copy.
+     */
+    suspend fun inspectFile(file: File): Result<Contents> = withContext(Dispatchers.IO) {
+        runCatching { contentsOf(file) }.onFailure { file.delete() }
+    }
+
+    private fun contentsOf(zipFile: File): Contents {
+        val text = ZipFile(zipFile).use { zip ->
+            val entry = zip.getEntry(BackupFormat.ENTRY_NAME) ?: error("No Riff Buddy data inside that file.")
+            zip.getInputStream(entry).use { it.readBytes().toString(Charsets.UTF_8) }
+        }
+        return Contents(JSONObject(text), zipFile)
     }
 
     /** Throws away an inspected backup that was not applied. */
@@ -131,7 +163,12 @@ class BackupRepo(
      * a database that is neither the old one nor the new one. If the rows fail,
      * the files written here are taken back out.
      */
-    suspend fun restore(contents: Contents, mode: BackupFormat.Mode): Result<Restored> =
+    /**
+     * [sweep] false keeps files no row points at any more, for a merge that
+     * may be undone: the rows can be put back, and their files must still
+     * be there. They go at the next sweep.
+     */
+    suspend fun restore(contents: Contents, mode: BackupFormat.Mode, sweep: Boolean = true): Result<Restored> =
         withContext(Dispatchers.IO) {
             try {
                 val root = contents.root
@@ -163,7 +200,8 @@ class BackupRepo(
                             }
                             val outcome = BackupMerge(SqliteMergeStore(database)).merge(rows)
                             Restored(outcome.added, mode, files = written.size, updated = outcome.updated,
-                                renumbered = outcome.renumbered, skipped = outcome.failed)
+                                renumbered = outcome.renumbered, skipped = outcome.failed,
+                                removed = outcome.removed, leftOut = outcome.leftOut)
                         } else {
                             val counts = mutableMapOf<String, Int>()
                             var failed = 0
@@ -189,6 +227,7 @@ class BackupRepo(
                         database.endTransaction()
                     }
                 }.onSuccess {
+                    if (!sweep) return@onSuccess
                     // Only once the rows are committed: files no row points at
                     // are gone — after a replace, the old library's; after a
                     // merge, any backup file whose row lost to a local one.
@@ -233,6 +272,9 @@ class BackupRepo(
         return written
     }
 
+    /** Deletes files no row points at: what a merge with [restore]'s sweep off left behind. */
+    suspend fun sweep(): Unit = withContext(Dispatchers.IO) { sweepUnreferenced(db.writableDatabase) }
+
     private fun sweepUnreferenced(database: SqlDatabase) {
         BackupFormat.FILE_TABLES.forEach { (table, folder) ->
             val keep = storedNames(database, table).toSet()
@@ -257,7 +299,7 @@ class BackupRepo(
     }
 
     suspend fun rowCounts(): Map<String, Int> = withContext(Dispatchers.IO) {
-        BackupFormat.TABLES.associateWith { table ->
+        (BackupFormat.TABLES - BackupFormat.DELETIONS).associateWith { table ->
             db.readableDatabase.rawQuery("SELECT COUNT(*) FROM $table", null)
                 .use { if (it.moveToFirst()) it.getInt(0) else 0 }
         }.filterValues { it > 0 }
@@ -282,6 +324,29 @@ private class SqliteMergeStore(private val db: SqlDatabase) : MergeStore {
         pragma("PRAGMA foreign_key_list($table)") { c ->
             c.requireString(c.getColumnIndexOrThrow("from")) to c.requireString(c.getColumnIndexOrThrow("table"))
         }
+
+    override fun owner(table: String): Pair<String, String>? =
+        pragma("PRAGMA foreign_key_list($table)") { c ->
+            Triple(c.requireString(c.getColumnIndexOrThrow("from")), c.requireString(c.getColumnIndexOrThrow("table")),
+                c.requireString(c.getColumnIndexOrThrow("on_delete")))
+        }.firstOrNull { it.third.equals("CASCADE", ignoreCase = true) }?.let { it.first to it.second }
+
+    override fun all(table: String): List<Map<String, String?>> =
+        db.rawQuery("SELECT * FROM $table", null).use { c ->
+            buildList {
+                while (c.moveToNext()) add(c.columnNames.indices.associate { c.columnNames[it] to (if (c.isNull(it)) null else c.getString(it)) })
+            }
+        }
+
+    override fun delete(table: String, where: Map<String, String>) {
+        db.delete(table, where.keys.joinToString(" AND ") { "$it = ?" }, where.values.toTypedArray())
+    }
+
+    override fun noteDeletion(table: String, identity: String, deletedAt: Long) {
+        db.insertWithOnConflict(BackupFormat.DELETIONS, null, SqlValues().apply {
+            put("table_name", table); put("identity", identity); put("deleted_at", deletedAt)
+        }, Conflict.REPLACE)
+    }
 
     override fun find(table: String, where: Map<String, String>): Map<String, String?>? {
         val clause = where.keys.joinToString(" AND ") { "$it = ?" }

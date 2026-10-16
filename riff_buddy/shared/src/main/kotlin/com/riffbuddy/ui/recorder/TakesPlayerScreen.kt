@@ -1,5 +1,8 @@
 package com.riffbuddy.ui.recorder
 
+import com.riffbuddy.ui.Shortcut
+import com.riffbuddy.ui.KeyShortcuts
+import androidx.compose.ui.input.key.Key
 import com.riffbuddy.domain.HelpTopic
 import com.riffbuddy.ui.help.HelpButton
 import kotlinx.coroutines.launch
@@ -112,6 +115,23 @@ fun TakesPlayerScreen(
         }.onFailure { error = "That take could not be read: ${it.message}" }
     }
     DisposableEffect(Unit) { onDispose { player.unload() } }
+
+    // Comparing is switching back and forth while listening, which is
+    // quicker by key than by moving the pointer between two buttons.
+    val loaded = state.loaded
+    val comparing = loaded && takes.size == 2
+    KeyShortcuts(
+        if (takes.size == 2) "Compare A/B" else "Take",
+        if (!loaded) null else Shortcut("Space", "Play or pause", listOf(Key.Spacebar)) { player.togglePlay() },
+        if (!loaded) null else Shortcut("← →", "Back or ahead 1 second (Shift: 5)", listOf(Key.DirectionLeft, Key.DirectionRight)) {
+            val step = if (shift) 5000L else 1000L
+            player.nudge(if (key == Key.DirectionLeft) -step else step)
+        },
+        if (!loaded) null else Shortcut("Home", "Back to the start", listOf(Key.MoveHome)) { player.seekMs(0) },
+        if (!comparing) null else Shortcut("A B", "Listen to take A or take B", listOf(Key.A, Key.B)) {
+            player.select(if (key == Key.A) 0 else 1)
+        },
+    )
 
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {

@@ -62,14 +62,21 @@ object BackupFormat {
      *
      * `ai_cache` is deliberately absent: it is a cache, restoring it would
      * serve stale answers, and it is the largest thing in the database.
+     *
+     * [DELETIONS] comes first: a merge reads what has been deleted before
+     * it looks at a single row, so a deleted item is not added back. In a
+     * full replace it is the last table emptied, after every other table's
+     * delete has noted itself there, so a replace leaves only the backup's
+     * own notes.
      */
     val TABLES = listOf(
+        DELETIONS,
         "tunings", "songs", "song_parts", "sessions", "session_items",
         "guitars", "amps", "pedals", "rigs",
         "tone_cards", "ai_messages", "metronome_presets", "settings", "ai_usage",
         "tab_files", "audio_files", "saved_loops", "recordings", "backing_tracks",
         "lessons", "homework", "routines", "routine_steps",
-        "milestones",
+        "milestones", "custom_shapes",
     )
 
     /**
@@ -81,6 +88,9 @@ object BackupFormat {
      * came back without it.
      */
     val EXCLUDED = setOf("ai_cache")
+
+    /** Notes of deleted items, so a deletion reaches every device; not something to count for a person. */
+    const val DELETIONS = "deletions"
 
     fun manifest(appVersion: String, now: Instant = Instant.now()): JSONObject = JSONObject()
         .put("format", MAGIC)
@@ -124,7 +134,7 @@ object BackupFormat {
     /** What a backup holds, for the summary shown before it is applied. */
     fun summarize(root: JSONObject): Map<String, Int> {
         val tables = root.optJSONObject("tables") ?: return emptyMap()
-        return TABLES.mapNotNull { name ->
+        return (TABLES - DELETIONS).mapNotNull { name ->
             val rows = tables.optJSONArray(name) ?: return@mapNotNull null
             if (rows.length() == 0) null else name to rows.length()
         }.toMap()

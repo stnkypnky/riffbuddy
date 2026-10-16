@@ -1,5 +1,8 @@
 package com.riffbuddy.ui.recorder
 
+import com.riffbuddy.ui.Shortcut
+import com.riffbuddy.ui.KeyShortcuts
+import androidx.compose.ui.input.key.Key
 import com.riffbuddy.domain.Device
 import com.riffbuddy.ui.theme.tactileClickable
 import java.io.File
@@ -235,6 +238,27 @@ fun RecorderScreen(
 
     /** Messed it up and done for now: nothing kept, back to ready. */
     val stopAndDelete: () -> Unit = { discard(then = {}) }
+
+    // One key both starts and ends a take, as in any recording app: reaching
+    // for a second key with a guitar on is how takes end late. Stop keeps the
+    // take; throwing one away stays a click, so no stray key press loses it.
+    KeyShortcuts(
+        "Recorder",
+        if (!granted) null else Shortcut("Space", "Record, or stop and keep the take", listOf(Key.Spacebar)) {
+            when {
+                counting != null -> cancelCountdown()
+                state.status == RecorderStatus.IDLE -> record()
+                else -> finishTake()
+            }
+        },
+        if (!granted || playAlong.source != TakeSource.NONE) null else Shortcut("P", "Pause or resume the take", listOf(Key.P)) {
+            when (state.status) {
+                RecorderStatus.RECORDING -> engine.pause()
+                RecorderStatus.PAUSED -> engine.resume()
+                else -> {}
+            }
+        },
+    )
 
     val finish by rememberUpdatedState(finishTake)
     val lifecycle = LocalLifecycleOwner.current.lifecycle

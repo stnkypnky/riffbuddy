@@ -85,6 +85,19 @@ object Phrases {
     }
 
     /**
+     * Dots placed anywhere, heard as one chord: strummed, picked and
+     * strummed again, like a chord shape. A string can only sound one note
+     * at a time, so where two dots share a string the higher one plays, as
+     * a finger further up the neck would stop the string there. Every dot
+     * still plays in the run up and down; this is for hearing them at once.
+     */
+    fun together(tuning: Tuning, cells: Set<Pair<Int, Int>>, speed: Speed): Phrase {
+        val frets = MutableList(tuning.stringCount) { -1 }
+        cells.filter { it.first < tuning.stringCount }.forEach { (s, f) -> frets[s] = maxOf(frets[s], f) }
+        return chord(tuning, frets, speed)
+    }
+
+    /**
      * A progression, one chord per bar of 4/4, strummed on beats one and
      * three. Plain on purpose: the point is hearing the chords change, and a
      * busy rhythm would make that harder to follow. Each chord's notes carry

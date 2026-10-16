@@ -17,6 +17,15 @@ interface SecureStore {
     fun remove(provider: ProviderId)
     fun clear()
 
+    /**
+     * Other secrets, by name: the ones a paired device shares with this one
+     * for syncing. Kept the same way as API keys, and like them never in
+     * the database, so never in a backup or a sync.
+     */
+    fun putSecret(name: String, value: String)
+    fun getSecret(name: String): String?
+    fun removeSecret(name: String)
+
     fun has(provider: ProviderId): Boolean = get(provider) != null
 
     fun providersWithKeys(): Set<ProviderId> = ProviderId.entries.filter { has(it) }.toSet()

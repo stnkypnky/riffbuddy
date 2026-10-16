@@ -64,11 +64,16 @@ xattr -cr "/Applications/Riff Buddy.app"
   `sudo apt install ./riffbuddy_*_amd64.deb`. Riff Buddy appears in your
   applications menu.
 
-**Bring your practice along:** on the phone or tablet, **Me › Settings ›
-Export**, then send the file to the computer and drag it onto the Riff Buddy
-window (or use **Import**). On a computer:
+**Bring your practice along:** with the phone or tablet on the same Wi-Fi,
+open **Me › Settings › Sync with your other devices** on both, tap **Pair**,
+check that both screens show the same six digits, then **Sync now**. (Or
+**Export** a backup there, send the file to the computer, and drag it onto
+the Riff Buddy window.) On a computer:
+- The first time you sync, Windows or macOS may ask whether Riff Buddy can
+  use the network: allow it on **private** networks.
 - Your API keys go in the system's own keychain.
-- Space starts and stops the metronome, and Escape goes back.
+- Each screen has keyboard shortcuts, with Space for its main control:
+  press **?** to see them. Escape goes back.
 - The looper opens WAV, AIFF and MP3, but not M4A.
 - Reminders show only while the app is open.
 
@@ -123,6 +128,8 @@ provider suggests a smarter model, tap **Use it**.
 ## Your data and privacy
 
 - **Everything stays on your device.** No account, no analytics, no ads.
+- **Syncing goes only to devices you paired,** directly over your own Wi-Fi,
+  encrypted. No cloud, no server.
 - **The coach sends only what it needs:** the song's title and artist, the
   part, your tuning and your gear. Never your recordings, tab files, notes
   or practice history. **What I sent**, under any answer, shows the exact
@@ -146,6 +153,7 @@ provider suggests a smarter model, tap **Use it**.
 | "Fill in with the coach" isn't sure about my amp | Check the draft against your amp and edit anything that's off. Nothing saves until you tap **Save**. |
 | No sound from Play or the metronome | Turn up the **media** volume (not the ringer), and check that Bluetooth isn't sending the sound elsewhere. |
 | Mac: the tuner doesn't move | System Settings › Privacy & Security › **Microphone**: turn on Riff Buddy, then reopen it. |
+| My other device isn't listed for syncing | Open Riff Buddy on both, on the same Wi-Fi. Some routers keep devices apart: tap **Not listed? Type its address** and enter the address the other device shows. |
 | Computer: the tuner hears the wrong thing | On the **Recorder**, pick the input you play into, such as a USB microphone or your amp's USB. |
 
 Still stuck? Tap **?** on the screen you're on. Most questions are answered

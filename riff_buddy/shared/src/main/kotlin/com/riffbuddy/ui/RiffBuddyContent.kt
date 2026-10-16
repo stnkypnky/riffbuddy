@@ -13,7 +13,7 @@ import com.riffbuddy.AppServices
  */
 @Composable
 fun RiffBuddyContent(app: AppServices, overlay: @Composable () -> Unit = {}) {
-    Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().then(shortcutRoot())) {
         RiffBuddyShell(
             backupRepo = app.backup,
             settingsRepo = app.repo,
@@ -41,9 +41,13 @@ fun RiffBuddyContent(app: AppServices, overlay: @Composable () -> Unit = {}) {
             routineRunner = app.routineRunner,
             partRepo = app.parts,
             milestoneRepo = app.milestones,
+            customShapeRepo = app.customShapes,
+            syncService = app.sync,
         )
+        com.riffbuddy.ui.settings.SyncHost(app.sync)
         // Song-mastered moments and milestone banners, above the app.
         CelebrationHost()
+        ShortcutList()
         overlay()
     }
 }

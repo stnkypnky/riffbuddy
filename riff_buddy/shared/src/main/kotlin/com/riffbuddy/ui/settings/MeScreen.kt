@@ -79,6 +79,8 @@ fun MeScreen(
     practiceSection: @Composable () -> Unit = {},
     /** The gear editor. */
     gear: @Composable () -> Unit = {},
+    /** Syncing with the player's other devices. */
+    sync: @Composable () -> Unit = {},
 ) {
     var section by remember(openStats) { mutableStateOf(if (openStats > 0) MeTab.STATS else MeTab.LOG) }
     // A backup waiting to be confirmed is shown where its dialog lives, even
@@ -117,6 +119,7 @@ fun MeScreen(
                 )
                 practiceSection()
                 reminders()
+                sync()
                 DataSection(
                     state = dataState,
                     onExport = onExport,
@@ -141,6 +144,12 @@ private fun AboutCard() {
                 "Only what the coach needs: the song's title and artist, the part you asked " +
                     "about, your tuning and capo, and your gear's names and controls. Never your " +
                     "recordings, your tab files, your notes or your practice history.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                "Syncing sends your data only to devices you paired, on your own Wi-Fi, sealed so " +
+                    "nothing else on the network can read it.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

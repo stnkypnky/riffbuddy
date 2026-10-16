@@ -4,11 +4,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.isShiftPressed
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.loadSvgPainter
 import androidx.compose.ui.text.font.FontFamily
@@ -23,12 +18,12 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.riffbuddy.AppServices
 import com.riffbuddy.ai.OnlineCheck
-import com.riffbuddy.audio.MetronomeEngine
-import com.riffbuddy.audio.MetronomeSettings
-import com.riffbuddy.audio.TapTempo
 import com.riffbuddy.platform.LocalPlatform
 import com.riffbuddy.ui.Intro
+import com.riffbuddy.ui.LocalShortcuts
 import com.riffbuddy.ui.RiffBuddyContent
+import com.riffbuddy.ui.Shortcut
+import com.riffbuddy.ui.ShortcutRegistry
 import com.riffbuddy.ui.theme.RiffBuddyTheme
 import java.awt.Dimension
 import java.io.File
@@ -60,6 +55,7 @@ fun main() {
         filesDir = dataDir,
         cacheDir = cacheDir,
         appVersion = System.getProperty("riffbuddy.version") ?: "desktop",
+        deviceName = computerName(),
     )
     val platform = DesktopPlatform(services, filesDir = dataDir, cacheDir = cacheDir)
     val prefs = Preferences.userRoot().node("riffbuddy/window")
@@ -72,7 +68,9 @@ fun main() {
             // carries on from it in place.
             position = WindowPosition.Aligned(Alignment.Center),
         )
-        val tapper = remember { TapTempo() }
+        // The keyboard shortcuts are caught inside the content, not here: see
+        // shortcutRoot. Escape does what Back does on a phone, at any depth.
+        val shortcuts = remember { ShortcutRegistry(listOf(Shortcut("Esc", "Go back", listOf(Key.Escape)) { platform.handleBack() })) }
         Window(
             onCloseRequest = {
                 prefs.putInt("width", state.size.width.value.toInt())
@@ -83,9 +81,6 @@ fun main() {
             state = state,
             title = "Riff Buddy",
             icon = AppIdentity.windowIcon(),
-            // Keys a focused control did not use. A text field keeps its own
-            // typing, so Space in the song search never starts the metronome.
-            onKeyEvent = { event -> shortcut(event, services.metronome, tapper, platform) },
         ) {
             LaunchedEffect(window) {
                 platform.window = window
@@ -95,31 +90,12 @@ fun main() {
                 window.minimumSize = Dimension(420, 560)
             }
             RiffBuddyTheme(condensedFont = Condensed, systemReducedMotion = reducedMotion) {
-                CompositionLocalProvider(LocalPlatform provides platform) {
+                CompositionLocalProvider(LocalPlatform provides platform, LocalShortcuts provides shortcuts) {
                     RiffBuddyContent(services, overlay = { Intro() })
                 }
             }
         }
     }
-}
-
-/**
- * Space starts and stops the metronome, T taps the tempo, the arrow keys move
- * it by one (by five with Shift), and Escape does what Back does on a phone.
- */
-private fun shortcut(event: KeyEvent, metronome: MetronomeEngine, tapper: TapTempo, platform: DesktopPlatform): Boolean {
-    if (event.type != KeyEventType.KeyDown) return false
-    val settings: MetronomeSettings = metronome.state.value.settings
-    val step = if (event.isShiftPressed) 5 else 1
-    when (event.key) {
-        Key.Spacebar -> if (metronome.state.value.isRunning) metronome.stop() else metronome.start(settings)
-        Key.T -> tapper.tap(System.currentTimeMillis())?.let { metronome.setBpm(it) }
-        Key.DirectionUp, Key.DirectionRight -> metronome.setBpm(settings.bpm + step)
-        Key.DirectionDown, Key.DirectionLeft -> metronome.setBpm(settings.bpm - step)
-        Key.Escape -> return platform.handleBack()
-        else -> return false
-    }
-    return true
 }
 
 /**
@@ -148,3 +124,14 @@ object DesktopPaths {
         else -> File(System.getenv("XDG_CACHE_HOME") ?: "$home/.cache", "riffbuddy")
     }
 }
+
+/**
+ * What other devices see this computer called until it is renamed: the
+ * name Windows gives it, else the network name ("zorin-laptop"), without
+ * the ".local" macOS adds.
+ */
+private fun computerName(): String =
+    System.getenv("COMPUTERNAME")?.takeIf { it.isNotBlank() }
+        ?: runCatching { File("/etc/hostname").readText().trim() }.getOrNull()?.takeIf { it.isNotBlank() }
+        ?: runCatching { java.net.InetAddress.getLocalHost().hostName.removeSuffix(".local") }.getOrNull()?.takeIf { it.isNotBlank() }
+        ?: "This computer"

@@ -48,14 +48,23 @@ class AndroidSecureStore(context: Context) : SecureStore {
         return gen.generateKey()
     }
 
-    override fun put(provider: ProviderId, apiKey: String) {
+    override fun put(provider: ProviderId, apiKey: String) = write(provider.name, apiKey.trim())
+
+    override fun get(provider: ProviderId): String? = read(provider.name)
+
+    // Sync's pair secrets, under a prefix no provider name has.
+    override fun putSecret(name: String, value: String) = write(SECRET_PREFIX + name, value)
+    override fun getSecret(name: String): String? = read(SECRET_PREFIX + name)
+    override fun removeSecret(name: String) = prefs.edit().remove(SECRET_PREFIX + name).apply()
+
+    private fun write(name: String, value: String) {
         val cipher = Cipher.getInstance(TRANSFORM).apply { init(Cipher.ENCRYPT_MODE, secretKey()) }
-        val blob = cipher.iv + cipher.doFinal(apiKey.trim().toByteArray(Charsets.UTF_8))
-        prefs.edit().putString(provider.name, Base64.encodeToString(blob, Base64.NO_WRAP)).apply()
+        val blob = cipher.iv + cipher.doFinal(value.toByteArray(Charsets.UTF_8))
+        prefs.edit().putString(name, Base64.encodeToString(blob, Base64.NO_WRAP)).apply()
     }
 
-    override fun get(provider: ProviderId): String? {
-        val stored = prefs.getString(provider.name, null) ?: return null
+    private fun read(name: String): String? {
+        val stored = prefs.getString(name, null) ?: return null
         return try {
             val blob = Base64.decode(stored, Base64.NO_WRAP)
             val cipher = Cipher.getInstance(TRANSFORM)
@@ -83,5 +92,6 @@ class AndroidSecureStore(context: Context) : SecureStore {
         const val TRANSFORM = "AES/GCM/NoPadding"
         const val IV_BYTES = 12
         const val TAG_BITS = 128
+        const val SECRET_PREFIX = "secret:"
     }
 }

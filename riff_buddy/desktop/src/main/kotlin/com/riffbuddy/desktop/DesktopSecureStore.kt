@@ -22,24 +22,34 @@ class DesktopSecureStore : SecureStore {
         .onFailure { AppLog.w(TAG, "no system keychain; API keys will last only until the app closes", it) }
         .getOrNull()
 
-    private val memory = mutableMapOf<ProviderId, String>()
+    private val memory = mutableMapOf<String, String>()
 
-    override fun put(provider: ProviderId, apiKey: String) {
-        val key = apiKey.trim()
+    override fun put(provider: ProviderId, apiKey: String) = write(provider.name, apiKey.trim())
+
+    override fun get(provider: ProviderId): String? = read(provider.name)
+
+    override fun remove(provider: ProviderId) = delete(provider.name)
+
+    // Other secrets (a paired device's, for syncing), under a prefix no provider name has.
+    override fun putSecret(name: String, value: String) = write(SECRET_PREFIX + name, value)
+    override fun getSecret(name: String): String? = read(SECRET_PREFIX + name)
+    override fun removeSecret(name: String) = delete(SECRET_PREFIX + name)
+
+    private fun write(account: String, value: String) {
         val ring = keyring
-        if (ring == null) memory[provider] = key
-        else ring.setPassword(SERVICE, provider.name, key)
+        if (ring == null) memory[account] = value
+        else ring.setPassword(SERVICE, account, value)
     }
 
-    override fun get(provider: ProviderId): String? {
-        val ring = keyring ?: return memory[provider]
+    private fun read(account: String): String? {
+        val ring = keyring ?: return memory[account]
         // The keychain throws for an entry that does not exist; that is "no key".
-        return runCatching { ring.getPassword(SERVICE, provider.name) }.getOrNull()?.takeIf { it.isNotBlank() }
+        return runCatching { ring.getPassword(SERVICE, account) }.getOrNull()?.takeIf { it.isNotBlank() }
     }
 
-    override fun remove(provider: ProviderId) {
-        memory.remove(provider)
-        keyring?.let { ring -> runCatching { ring.deletePassword(SERVICE, provider.name) } }
+    private fun delete(account: String) {
+        memory.remove(account)
+        keyring?.let { ring -> runCatching { ring.deletePassword(SERVICE, account) } }
     }
 
     override fun clear() = ProviderId.entries.forEach(::remove)
@@ -47,5 +57,6 @@ class DesktopSecureStore : SecureStore {
     private companion object {
         const val SERVICE = "Riff Buddy"
         const val TAG = "RiffKeys"
+        const val SECRET_PREFIX = "secret:"
     }
 }

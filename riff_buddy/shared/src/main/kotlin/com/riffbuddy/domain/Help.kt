@@ -174,8 +174,9 @@ object HelpCatalog {
         HelpTopic.METRONOME to listOfNotNull(
             if (Device.onComputer) Faq(
                 "Are there keyboard shortcuts?",
-                "Space starts and stops the metronome from anywhere in the app. T taps the tempo, the arrow " +
-                    "keys change it by 1 BPM (by 5 with Shift held), and Escape goes back.",
+                "Yes, and each screen has its own. Here, Space starts and stops the metronome, T taps the " +
+                    "tempo, and the arrow keys change it by 1 BPM (by 5 with Shift held). Anywhere else, M " +
+                    "starts and stops it. Press ? on any screen to see its keys.",
             ) else null,
             Faq(
                 "How do I set the tempo?",
@@ -333,7 +334,25 @@ object HelpCatalog {
                     "minor-sounding scale, and the major chord's otherwise. Standard tuning, or any tuning " +
                     "tuned down from it, like E♭.\n\n" +
                     "In every position, only its own notes stay bright; the rest of the scale dims, so you can " +
-                    "see exactly what's in the shape. Some have one note a stretch away, past the fourth fret.",
+                    "see exactly what's in the shape. Some have one note a stretch away, past the fourth fret.\n\n" +
+                    "The neck runs to fret 24, and every shape that fits is listed again an octave up: A minor's " +
+                    "Box 1 is at fret 5 and again at fret 17. The list goes from the nut up, so ▶ walks up the neck.",
+            ),
+            Faq(
+                "Can I put my own notes on the neck?",
+                "Yes, on the Custom page.\n\n" +
+                    "• Place dots — tap anywhere on the neck to put a dot there; each one sounds as you place " +
+                    "it. Tap it again to take it off. The lowest dot is the root (ringed) until you hold " +
+                    "another dot to make that one the root. Play low to high runs them up and back down; Play " +
+                    "together strums them like a chord. Good for a lick from a lesson or a chord shape you " +
+                    "found.\n" +
+                    "• Build a scale — pick a root, then tap the note chips to choose what's in it. The neck " +
+                    "fills everywhere those notes fall, like any scale here. If your notes match a known " +
+                    "scale, it says which (A C D E G is \"the same notes as A minor pentatonic\"). Five notes " +
+                    "get boxes and seven get 3NPS shapes.\n\n" +
+                    "Save either one with a name and it's listed under My shapes, ready to open again. Dots " +
+                    "remember the tuning they were placed in, because the same frets are different notes in " +
+                    "another tuning. Saved shapes go in backups.",
             ),
             Faq(
                 "What do Fret numbers, Note names and Scale degrees show?",
@@ -353,14 +372,11 @@ object HelpCatalog {
                     "The B string is the exception. Shapes that cross from G to B shift up one fret.",
             ),
             Faq(
-                "What makes a chord major or minor?",
-                "One note: the third. Major has the note 4 frets above the root, minor has it 3 frets above. " +
-                    "Compare open E and open Em in Chords: only one finger moves, one fret, and the chord goes " +
-                    "from bright to sad.",
-            ),
-            Faq(
-                "How are chords built?",
-                "By stacking notes from the root, counted in frets:\n\n" +
+                "How are chords built, and what makes one major or minor?",
+                "Major or minor comes down to one note: the third. Major has the note 4 frets above the root, " +
+                    "minor has it 3 frets above. Compare open E and open Em in Chords: only one finger moves, " +
+                    "one fret, and the chord goes from bright to sad.\n\n" +
+                    "Chords are built by stacking notes from the root, counted in frets:\n\n" +
                     "• Major: root, +4, +7\n" +
                     "• Minor: root, +3, +7\n" +
                     "• 7 (dominant): major plus +10, the bluesy chord\n" +
@@ -522,7 +538,13 @@ object HelpCatalog {
             ),
         ),
 
-        HelpTopic.RECORDER to listOf(
+        HelpTopic.RECORDER to listOfNotNull(
+            if (Device.onComputer) Faq(
+                "Can I record from the keyboard?",
+                "Yes. Space starts a take and stops it again, keeping it, and P pauses one with nothing playing " +
+                    "along. Throwing a take away " +
+                    "is left to its button, so a stray key never loses one. Press ? to see every key.",
+            ) else null,
             Faq(
                 "Can I get a countdown, or start over or delete a take if I mess up?",
                 "Both, next to Record.\n\n" +
@@ -854,16 +876,19 @@ object HelpCatalog {
             Faq(
                 if (Device.onComputer) "How do I keep this computer and a phone in step?"
                 else "How do I keep a tablet and a phone in step?",
-                "Export on the device you practice on, send the file across " +
-                    (if (Device.onComputer) "(a USB cable, email or a shared folder works)" else "(Quick Share works)") +
-                    ", and Import " +
-                    "it on the other.\n\n" +
-                    "• Replace all makes the other device an exact copy. Best when you only log " +
-                    "practice on one of them.\n" +
-                    "• Add to what is here keeps what's already there, adds what's new, and takes the backup's " +
-                    "version of anything edited more recently in it.\n\n" +
-                    "Adding songs, tabs or sessions on both devices is fine: Add to what is here keeps both " +
-                    "devices' additions, and importing the same backup twice doesn't duplicate anything.",
+                "Sync them, under Sync with your other devices. Both on the same Wi-Fi, with Riff Buddy " +
+                    "open on both.\n\n" +
+                    "• Pair once: tap Pair beside the other device, check both screens show the same six " +
+                    "digits, and tap It matches on both.\n" +
+                    "• Then Sync now, from either one, whenever you like. Each gets what the other added, the " +
+                    "newer edit of anything wins, and something deleted on one is deleted on the other, unless " +
+                    "it was changed there after.\n" +
+                    "• Undo last sync puts this device back as it was just before.\n\n" +
+                    "Settings, gear and API keys stay as each device has them. If the other device isn't " +
+                    "listed, your router may keep devices apart: type the address its Settings shows.\n\n" +
+                    (if (Device.onComputer) "The first time, your computer may ask whether Riff Buddy can use " +
+                        "the network. Allow it on private networks, or the other devices can't reach it.\n\n" else "") +
+                    "No shared Wi-Fi? Export a backup here and Import it there, choosing Add to what is here.",
             ),
             Faq(
                 "How do I get a practice reminder?",

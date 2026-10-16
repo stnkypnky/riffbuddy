@@ -1,5 +1,8 @@
 package com.riffbuddy.ui.tabs
 
+import com.riffbuddy.ui.Shortcut
+import com.riffbuddy.ui.KeyShortcuts
+import androidx.compose.ui.input.key.Key
 import com.riffbuddy.domain.HelpTopic
 import com.riffbuddy.ui.help.HelpButton
 import com.riffbuddy.ui.help.HelpSheet
@@ -115,6 +118,16 @@ fun TabPlayerScreen(
             leave(player.currentMemory())
         }
     }
+
+    val ready = player.ready
+    KeyShortcuts(
+        "Tab player",
+        if (!ready) null else Shortcut("Space", "Play or pause", listOf(Key.Spacebar)) { player.playPause() },
+        if (!ready) null else Shortcut("Home", "Stop, back to the start", listOf(Key.MoveHome)) { player.stop() },
+        if (!ready) null else Shortcut("− +", "Slower or faster by 5%", listOf(Key.Minus, Key.Equals, Key.NumPadSubtract, Key.NumPadAdd)) {
+            player.setSpeed(player.speedPercent + if (key == Key.Minus || key == Key.NumPadSubtract) -5 else 5)
+        },
+    )
 
     Column(Modifier.fillMaxSize()) {
         Row(

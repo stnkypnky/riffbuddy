@@ -1,6 +1,7 @@
 package com.riffbuddy.ui
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.input.key.Key
 import com.riffbuddy.ui.help.HelpActions
 import com.riffbuddy.ui.help.LocalHelpActions
 import kotlinx.coroutines.withContext
@@ -136,6 +137,8 @@ import com.riffbuddy.data.TabRepo
 import com.riffbuddy.data.AudioRepo
 import com.riffbuddy.data.RecordingRepo
 import com.riffbuddy.data.BackingRepo
+import com.riffbuddy.data.CustomShapeRepo
+import com.riffbuddy.domain.music.CustomShape
 import com.riffbuddy.data.TuningRepo
 import com.riffbuddy.data.PlanRepo
 import com.riffbuddy.ui.settings.ReminderSection
@@ -217,6 +220,8 @@ fun RiffBuddyShell(
     routineRunner: RoutineController,
     partRepo: PartRepo,
     milestoneRepo: MilestoneRepo,
+    customShapeRepo: CustomShapeRepo,
+    syncService: com.riffbuddy.sync.SyncService,
 ) {
     // Saveable, not just remembered: a rotation, or a lock screen that forces
     // its own orientation, recreates the screen, and plain remember would put
@@ -271,6 +276,7 @@ fun RiffBuddyShell(
     var coachLength by remember { mutableStateOf(com.riffbuddy.ai.prompts.AskPrompt.Length.STANDARD) }
     var coachWeb by remember { mutableStateOf(false) }
     var savedBackings by remember { mutableStateOf(emptyList<SavedBacking>()) }
+    var customShapes by remember { mutableStateOf(emptyList<CustomShape>()) }
     var lessons by remember { mutableStateOf(emptyList<Lesson>()) }
     var homework by remember { mutableStateOf(emptyList<Homework>()) }
     var routines by remember { mutableStateOf(emptyList<Routine>()) }
@@ -395,6 +401,7 @@ fun RiffBuddyShell(
         takes = recordingRepo.all()
         parts = partRepo.all()
         savedBackings = backingRepo.all()
+        customShapes = customShapeRepo.all()
         lessons = planRepo.lessons()
         tunings = tuningRepo.all()
         homework = planRepo.homework()
@@ -485,6 +492,11 @@ fun RiffBuddyShell(
      * nothing on screen to say so. They belong in the settings table with
      * everything else that has to outlive the process.
      */
+    // Another device synced with this one: show what it brought.
+    LaunchedEffect(syncService.dataVersion) {
+        if (syncService.dataVersion > 0) { reload(); backup.refresh() }
+    }
+
     LaunchedEffect(Unit) {
         // The one reminder alarm can be lost to a force-stop; opening the app
         // puts it back from the saved settings.
@@ -759,6 +771,22 @@ fun RiffBuddyShell(
         planScreen = null; openTakes = null; openTab = null; openAudio = null; openSongId = null
         tab = t
     }
+    // Space belongs to whichever screen is showing, so the metronome has a
+    // key of its own that works everywhere: playing along to the looper or a
+    // tab with a click is common, and M reaches it without leaving either.
+    val shortcuts = LocalShortcuts.current
+    KeyShortcuts(
+        "Anywhere",
+        Shortcut("${ShortcutRegistry.primaryLabel}1 – 5", "Home, Songs, Tools, Coach, Me",
+            listOf(Key.One, Key.Two, Key.Three, Key.Four, Key.Five), primary = true) {
+            goToTab(Tab.entries[listOf(Key.One, Key.Two, Key.Three, Key.Four, Key.Five).indexOf(key)])
+        },
+        Shortcut("M", "Start or stop the metronome", listOf(Key.M)) {
+            if (metronome.isRunning) engine.stop() else engine.start(metronome.settings)
+        },
+        Shortcut("?", "Show these shortcuts", listOf(Key.Slash, Key.F1)) { shortcuts?.showingList = true },
+        appWide = true,
+    )
     val helpActions = remember {
         HelpActions(onAskCoach = { question ->
             coachQuestion = question
@@ -1116,6 +1144,15 @@ fun RiffBuddyShell(
                                     phrasePlayer = phrasePlayer,
                                     a4Hz = practiceSettings.a4Hz.toDouble(),
                                     favorites = chordFavorites,
+                                    customShapes = customShapes,
+                                    // Saving hands back the id, so the shape on screen
+                                    // becomes the saved one and a second save overwrites it.
+                                    onSaveShape = { shape ->
+                                        customShapeRepo.save(shape).also { customShapes = customShapeRepo.all() }
+                                    },
+                                    onDeleteShape = { shape ->
+                                        scope.launch { customShapeRepo.delete(shape.id); customShapes = customShapeRepo.all() }
+                                    },
                                     onToggleFavorite = { key ->
                                         chordFavorites = if (key in chordFavorites) chordFavorites - key else chordFavorites + key
                                         scope.launch { settingsRepo.putSetting(ChordFavorites.SETTING, ChordFavorites.format(chordFavorites)) }
@@ -1366,6 +1403,7 @@ fun RiffBuddyShell(
                                         reload()
                                     }
                                 },
+                                sync = { com.riffbuddy.ui.settings.SyncSection(syncService) },
                                 onSetPrimary = onSetPrimaryAction,
                                 onPickModel = onPickModelAction,
                                 onRefreshModels = onRefreshModelsAction,

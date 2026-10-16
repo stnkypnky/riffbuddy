@@ -50,6 +50,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffbuddy.domain.music.ChordLibrary
 import com.riffbuddy.domain.music.ChordQuality
+import com.riffbuddy.domain.music.CustomShape
+import com.riffbuddy.ui.KeyShortcuts
+import com.riffbuddy.ui.Shortcut
+import androidx.compose.ui.input.key.Key as KeyboardKey
 import com.riffbuddy.domain.music.Fretboard
 import com.riffbuddy.domain.music.Key
 import com.riffbuddy.domain.music.Notes
@@ -77,7 +81,7 @@ import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.flow.MutableStateFlow
 
 private enum class TheoryTab(val label: String) {
-    SCALES("Scales"), CHORDS("Chords"), KEYS("Keys")
+    SCALES("Scales"), CHORDS("Chords"), KEYS("Keys"), CUSTOM("Custom")
 }
 
 private val ROOT_NAMES = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
@@ -113,6 +117,11 @@ fun TheoryScreen(
     /** Hear a position, a chord or a progression. Null hides the Play buttons. */
     phrasePlayer: PhrasePlayer? = null,
     a4Hz: Double = 440.0,
+    /** The player's saved scales and dot shapes, for the Custom page. */
+    customShapes: List<CustomShape> = emptyList(),
+    /** Saves a new shape or overwrites one; returns its id. */
+    onSaveShape: suspend (CustomShape) -> Long = { 0L },
+    onDeleteShape: (CustomShape) -> Unit = {},
 ) {
     var tab by remember { mutableStateOf(TheoryTab.SCALES) }
     var root by remember { mutableStateOf(9) }          // A, where most people start
@@ -124,6 +133,7 @@ fun TheoryScreen(
     var flats by remember { mutableStateOf(false) }
     val rootNames = if (flats) FLAT_ROOT_NAMES else ROOT_NAMES
     var minorKey by remember { mutableStateOf(false) }
+    val custom = remember { CustomState() }
 
     // What's playing, and where the speaker has got to in it.
     var speed by remember { mutableStateOf(Phrases.Speed.SLOW) }
@@ -147,7 +157,9 @@ fun TheoryScreen(
     // A phrase belongs to what was on screen when Play was tapped. Change the
     // root, scale, tuning or page, and it stops rather than playing on under
     // a diagram it no longer matches.
-    LaunchedEffect(tab, root, scale, overlay, tuning, quality, minorKey) { phrasePlayer?.stop() }
+    LaunchedEffect(tab, root, scale, overlay, tuning, quality, minorKey, custom.scaleMode, custom.dots, custom.classes, custom.position) {
+        phrasePlayer?.stop()
+    }
     DisposableEffect(Unit) { onDispose { phrasePlayer?.stop() } }
 
     /** Play [phrase] as [key], or stop it if [key] is already playing. */
@@ -162,7 +174,7 @@ fun TheoryScreen(
     ) {
         Text("Theory", style = MaterialTheme.typography.headlineMedium)
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        com.riffbuddy.ui.ChipFlow {
             TheoryTab.entries.forEach { candidate ->
                 FilterChip(
                     selected = tab == candidate,
@@ -176,10 +188,11 @@ fun TheoryScreen(
         // Every choice is one menu chip on one row. This was twelve
         // root chips, a scale list, up to eighteen position chips and three
         // label chips — eight rows on a phone before the neck came into view.
-        com.riffbuddy.ui.ChipFlow {
+        // Dots have no root to pick here: it's the lowest dot, or the one held.
+        if (tab != TheoryTab.CUSTOM || custom.scaleMode) com.riffbuddy.ui.ChipFlow {
             com.riffbuddy.ui.MenuChip(
                 text = "Root: ${rootNames[root]}", options = (0..11).toList(), selected = root,
-                label = { rootNames[it] }, onPick = { root = it }, description = "Root note",
+                label = { rootNames[it] }, onPick = { root = it; custom.position = 0 }, description = "Root note",
             )
             when (tab) {
                 TheoryTab.SCALES -> {
@@ -207,14 +220,18 @@ fun TheoryScreen(
                     )
                     if (phrasePlayer != null) SpeedChip(speed) { speed = it; phrasePlayer.stop() }
                 }
+                // The tuning and the rest sit with the neck on this page.
+                TheoryTab.CUSTOM -> {}
             }
         }
 
         when (tab) {
             TheoryTab.SCALES -> {
-                val boxes = Fretboard.pentatonicBoxes(tuning, root, scale)
-                val nps = Fretboard.threeNotesPerString(tuning, root, scale)
-                val caged = Fretboard.cagedRegions(tuning, root, scale)
+                // Each shape again an octave up, where it fits: a 24-fret
+                // neck has Box 1 of A minor at the 17th as well as the 5th.
+                val boxes = Fretboard.withOctaveUp(Fretboard.pentatonicBoxes(tuning, root, scale))
+                val nps = Fretboard.withOctaveUp(Fretboard.threeNotesPerString(tuning, root, scale))
+                val caged = Fretboard.withOctaveUp(Fretboard.cagedRegions(tuning, root, scale))
                 val position = when (val o = overlay) {
                     is Overlay.Box -> boxes.getOrNull(o.index)
                     is Overlay.Nps -> nps.getOrNull(o.index)
@@ -272,7 +289,13 @@ fun TheoryScreen(
                                 // Whole neck has no one shape to play, so Play
                                 // runs one octave up from the lowest root.
                                 val run = position ?: Fretboard.oneOctave(tuning, root, scale)
-                                val key = "scale:$root:${scale.name}:${tuning.name}:${run.name}:${speed.name}"
+                                val key = "scale:$root:${scale.name}:${tuning.name}:${run.name}:${run.frets.first}:${speed.name}"
+                                KeyShortcuts(
+                                    "Theory",
+                                    Shortcut("Space", "Play or stop the scale", listOf(KeyboardKey.Spacebar)) {
+                                        toggle(key) { Phrases.scaleRun(tuning, run.ascending(tuning), speed) }
+                                    },
+                                )
                                 com.riffbuddy.ui.ChipFlow(Modifier.padding(top = 4.dp)) {
                                     PlayButton(
                                         playing = playing?.key == key,
@@ -476,6 +499,30 @@ fun TheoryScreen(
                     }
                 }
             }
+
+            TheoryTab.CUSTOM -> MyShapes(
+                state = custom,
+                tuning = tuning,
+                tunings = tunings,
+                onPickTuning = onPickTuning,
+                root = root,
+                onRoot = { root = it },
+                rootNames = rootNames,
+                flats = flats,
+                label = label,
+                onLabel = { label = it },
+                onFlats = { flats = !flats },
+                onPlayNote = onPlayNote,
+                sounding = sounding,
+                canPlay = phrasePlayer != null,
+                playingKey = playing?.key,
+                onToggle = { key, phrase -> toggle(key, phrase) },
+                speed = speed,
+                onSpeed = { speed = it; phrasePlayer?.stop() },
+                saved = customShapes,
+                onSave = onSaveShape,
+                onDelete = onDeleteShape,
+            )
         }
 
     }
@@ -483,7 +530,7 @@ fun TheoryScreen(
 
 /** Play/Stop, with words: the scale run is long enough to want a clear Stop. */
 @Composable
-private fun PlayButton(playing: Boolean, text: String, onClick: () -> Unit) {
+internal fun PlayButton(playing: Boolean, text: String, onClick: () -> Unit) {
     com.riffbuddy.ui.tactile.FilledTonalButton(onClick = onClick, modifier = Modifier.heightIn(min = 48.dp)) {
         Icon(
             if (playing) Icons.Filled.Stop else Icons.Filled.PlayArrow,
@@ -508,7 +555,7 @@ private fun PlayIcon(playing: Boolean, what: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SpeedChip(speed: Phrases.Speed, onPick: (Phrases.Speed) -> Unit) =
+internal fun SpeedChip(speed: Phrases.Speed, onPick: (Phrases.Speed) -> Unit) =
     com.riffbuddy.ui.MenuChip(
         text = speed.label,
         options = Phrases.Speed.entries,

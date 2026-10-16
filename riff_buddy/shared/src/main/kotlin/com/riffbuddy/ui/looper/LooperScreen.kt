@@ -1,5 +1,8 @@
 package com.riffbuddy.ui.looper
 
+import com.riffbuddy.ui.Shortcut
+import com.riffbuddy.ui.KeyShortcuts
+import androidx.compose.ui.input.key.Key
 import com.riffbuddy.domain.HelpTopic
 import com.riffbuddy.ui.help.HelpButton
 import androidx.compose.foundation.Canvas
@@ -187,6 +190,50 @@ fun LooperScreen(
         }
     }
 
+    fun setA() {
+        val now = state.positionMs
+        val b = state.loopEndMs
+        if (b != null && now < b - 250) {
+            loopError = if (engine.setLoop(now, b)) null else "A loop needs to be at least a quarter of a second."
+        } else {
+            engine.setLoop(null, null)
+            pendingA = now
+        }
+    }
+    fun setB() {
+        val a = pendingA ?: state.loopStartMs
+        if (a == null) {
+            loopError = "Set A first — where the loop starts."
+        } else {
+            loopError = if (engine.setLoop(a, state.positionMs)) null else "A loop needs to be at least a quarter of a second."
+            pendingA = null
+        }
+    }
+    fun clearLoop() { engine.setLoop(null, null); pendingA = null }
+
+    // A and B are the buttons' own names, so the keys need no learning. The
+    // speed keys rest while the trainer runs, as the speed controls do: it
+    // owns the speed until it stops.
+    val ready = phase == Phase.Ready
+    val speedFree = ready && state.trainer == null
+    KeyShortcuts(
+        "Looper",
+        if (!ready) null else Shortcut("Space", "Play or pause", listOf(Key.Spacebar)) { engine.togglePlay() },
+        if (!ready) null else Shortcut("← →", "Back or ahead 1 second (Shift: 5)", listOf(Key.DirectionLeft, Key.DirectionRight)) {
+            val step = if (shift) 5000L else 1000L
+            engine.nudge(if (key == Key.DirectionLeft) -step else step)
+        },
+        if (!ready) null else Shortcut("Home", "Back to the start of the loop, or the song", listOf(Key.MoveHome)) {
+            engine.seekMs(state.loopStartMs ?: 0)
+        },
+        if (!ready) null else Shortcut("A", "Set A, where the loop starts", listOf(Key.A)) { setA() },
+        if (!ready) null else Shortcut("B", "Set B, where the loop ends", listOf(Key.B)) { setB() },
+        if (!ready) null else Shortcut("C", "Clear the loop", listOf(Key.C)) { clearLoop() },
+        if (!speedFree) null else Shortcut("− +", "Slower or faster by 5%", listOf(Key.Minus, Key.Equals, Key.NumPadSubtract, Key.NumPadAdd)) {
+            engine.setSpeed(state.speedPercent + if (key == Key.Minus || key == Key.NumPadSubtract) -5 else 5)
+        },
+    )
+
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
@@ -241,26 +288,9 @@ fun LooperScreen(
                 LoopControls(
                     state = state,
                     pendingA = pendingA,
-                    onSetA = {
-                        val now = state.positionMs
-                        val b = state.loopEndMs
-                        if (b != null && now < b - 250) {
-                            loopError = if (engine.setLoop(now, b)) null else "A loop needs to be at least a quarter of a second."
-                        } else {
-                            engine.setLoop(null, null)
-                            pendingA = now
-                        }
-                    },
-                    onSetB = {
-                        val a = pendingA ?: state.loopStartMs
-                        if (a == null) {
-                            loopError = "Set A first — where the loop starts."
-                        } else {
-                            loopError = if (engine.setLoop(a, state.positionMs)) null else "A loop needs to be at least a quarter of a second."
-                            pendingA = null
-                        }
-                    },
-                    onClear = { engine.setLoop(null, null); pendingA = null },
+                    onSetA = ::setA,
+                    onSetB = ::setB,
+                    onClear = ::clearLoop,
                     onSave = { savingLoop = true },
                 )
                 loopError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }

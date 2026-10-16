@@ -35,6 +35,9 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.riffbuddy.domain.music.FretPosition
+import com.riffbuddy.domain.music.Fretboard
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.riffbuddy.ui.theme.RiffColors
 
 /** What to print inside each dot. */
@@ -59,7 +62,7 @@ fun FretboardDiagram(
     openNotes: List<String>,
     label: DotLabel,
     highlight: IntRange? = null,
-    maxFret: Int = 15,
+    maxFret: Int = Fretboard.MAX_FRET,
     /**
      * Pitch classes to bring forward — the chord tones of whatever chord is
      * playing. The rest of the scale is still drawn, smaller and
@@ -74,17 +77,28 @@ fun FretboardDiagram(
     onTapNote: ((FretPosition) -> Unit)? = null,
     /** The (string, fret) cells sounding right now, as a phrase plays through. */
     sounding: Set<Pair<Int, Int>> = emptySet(),
+    /**
+     * Tapping any spot on the neck, a dot or not, as (string, fret): for
+     * placing dots of your own. Takes the place of [onTapNote].
+     */
+    onTapCell: ((Int, Int) -> Unit)? = null,
+    /** Holding a spot, as (string, fret). */
+    onHoldCell: ((Int, Int) -> Unit)? = null,
+    /** What a screen reader says for the neck, which is one drawing to it. */
+    description: String? = null,
 ) = BoxWithConstraints {
     val measurer = rememberTextMeasurer()
     // Read through state, not captured: the tap detector outlives recompositions.
     val tapNote by rememberUpdatedState(onTapNote)
+    val tapCell by rememberUpdatedState(onTapCell)
+    val holdCell by rememberUpdatedState(onHoldCell)
 
     /*
      * Fit the whole neck when there is room, scroll when there is not.
      *
      * A tablet in landscape has 1200 dp of width and no business making anyone
      * drag a fretboard sideways — the whole point of the big screen is seeing
-     * the shape at once. A phone in portrait genuinely cannot show sixteen
+     * the shape at once. A phone in portrait genuinely cannot show twenty-five
      * frets at a legible size, so there it still scrolls.
      *
      * The threshold is the smallest fret that a dot with a note name inside it
@@ -134,23 +148,32 @@ fun FretboardDiagram(
                 .width(fretWidth * (maxFret + 1) + 40.dp)
                 .height(stringGap * stringCount + 28.dp)
                 .then(
-                    if (onTapNote == null) Modifier
+                    if (onTapNote == null && onTapCell == null) Modifier
                     else Modifier.pointerInput(positions, stringCount, maxFret, fretWidth, stringGap) {
-                        detectTapGestures { tap ->
-                            // The same geometry the drawing uses, run backwards:
-                            // nearest string, then the fret space the tap is in
-                            // (left of the nut is the open string).
+                        // The same geometry the drawing uses, run backwards:
+                        // nearest string, then the fret space the tap is in
+                        // (left of the nut is the open string).
+                        fun cellAt(at: Offset): Pair<Int, Int> {
                             val fretPx = fretWidth.toPx()
                             val stringPx = stringGap.toPx()
                             val left = 34.dp.toPx()
                             val top = 14.dp.toPx()
-                            val fromTop = ((tap.y - top) / stringPx).roundToInt().coerceIn(0, stringCount - 1)
+                            val fromTop = ((at.y - top) / stringPx).roundToInt().coerceIn(0, stringCount - 1)
                             val string = stringCount - 1 - fromTop
-                            val fret = if (tap.x < left) 0 else ceil((tap.x - left) / fretPx).toInt()
-                            positions.firstOrNull { it.string == string && it.fret == fret }?.let { tapNote?.invoke(it) }
+                            val fret = if (at.x < left) 0 else ceil((at.x - left) / fretPx).toInt().coerceIn(1, maxFret)
+                            return string to fret
+                        }
+                        detectTapGestures(
+                            onLongPress = { at -> holdCell?.let { hold -> cellAt(at).let { (s, f) -> hold(s, f) } } },
+                        ) { tap ->
+                            val (string, fret) = cellAt(tap)
+                            val cell = tapCell
+                            if (cell != null) cell(string, fret)
+                            else positions.firstOrNull { it.string == string && it.fret == fret }?.let { tapNote?.invoke(it) }
                         }
                     }
                 )
+                .then(if (description == null) Modifier else Modifier.semantics { contentDescription = description })
         ) {
             val fretPx = fretWidth.toPx()
             val stringPx = stringGap.toPx()
@@ -208,8 +231,8 @@ fun FretboardDiagram(
             listOf(3, 5, 7, 9, 15, 17, 19, 21).filter { it <= maxFret }.forEach { fret ->
                 markerDot(left, fretPx, fret, top, stringPx, stringCount, muted)
             }
-            if (maxFret >= 12) {
-                markerDot(left, fretPx, 12, top, stringPx, stringCount, muted, double = true)
+            listOf(12, 24).filter { it <= maxFret }.forEach { fret ->
+                markerDot(left, fretPx, fret, top, stringPx, stringCount, muted, double = true)
             }
 
             openNotes.forEachIndexed { index, note ->

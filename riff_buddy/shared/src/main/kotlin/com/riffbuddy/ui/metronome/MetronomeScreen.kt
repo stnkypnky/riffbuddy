@@ -1,5 +1,8 @@
 package com.riffbuddy.ui.metronome
 
+import com.riffbuddy.ui.Shortcut
+import com.riffbuddy.ui.KeyShortcuts
+import androidx.compose.ui.input.key.Key
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -94,6 +97,17 @@ fun MetronomeScreen(
     val s = state.settings
     val haptics = LocalHapticFeedback.current
     val tapper = remember { TapTempo() }
+    // Up and right both mean faster, the way a volume slider reads either way.
+    fun nudge(by: Int) = onSettings(s.copy(bpm = (s.bpm + by).coerceIn(MetronomeSettings.BPM_RANGE)))
+    KeyShortcuts(
+        "Metronome",
+        Shortcut("Space", "Start or stop", listOf(Key.Spacebar)) { if (state.isRunning) onStop() else onStart() },
+        Shortcut("T", "Tap the tempo", listOf(Key.T)) {
+            tapper.tap(System.currentTimeMillis())?.let { onSettings(s.copy(bpm = it)) }
+        },
+        Shortcut("↑ →", "Faster by 1 BPM (Shift: 5)", listOf(Key.DirectionUp, Key.DirectionRight)) { nudge(if (shift) 5 else 1) },
+        Shortcut("↓ ←", "Slower by 1 BPM (Shift: 5)", listOf(Key.DirectionDown, Key.DirectionLeft)) { nudge(if (shift) -5 else -1) },
+    )
 
     Column(
         Modifier

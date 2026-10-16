@@ -13,6 +13,7 @@ import com.riffbuddy.audio.TunerEngine
 import com.riffbuddy.data.AiCacheRepo
 import com.riffbuddy.data.AudioRepo
 import com.riffbuddy.data.BackingRepo
+import com.riffbuddy.data.CustomShapeRepo
 import com.riffbuddy.data.BackupFormat
 import com.riffbuddy.data.BackupRepo
 import com.riffbuddy.data.ChatRepo
@@ -32,6 +33,7 @@ import com.riffbuddy.data.SongRepo
 import com.riffbuddy.data.TabRepo
 import com.riffbuddy.data.ToneCardRepo
 import com.riffbuddy.data.TuningRepo
+import com.riffbuddy.sync.SyncService
 import com.riffbuddy.tabs.TabLibrary
 import java.io.File
 
@@ -60,6 +62,10 @@ class AppServices(
     filesDir: File,
     cacheDir: File,
     appVersion: String,
+    /** What other devices see this one called, until the player renames it. */
+    deviceName: String = "This device",
+    /** Held while syncing is open: a phone drops broadcasts without it. */
+    holdNetwork: () -> AutoCloseable = { AutoCloseable {} },
 ) {
     val repo by lazy { Repo(db) }
     val presets by lazy { PresetRepo(db) }
@@ -99,6 +105,9 @@ class AppServices(
     /** Saved backing-track recipes. */
     val backing by lazy { BackingRepo(db) }
 
+    /** The player's own scales and dot shapes, from Theory. */
+    val customShapes by lazy { CustomShapeRepo(db) }
+
     /** Takes, the same arrangement as tab files. */
     val recordings by lazy { RecordingRepo(db, recordingsDir) }
     val recorder by lazy { RecorderEngine(audioInputs) }
@@ -113,6 +122,11 @@ class AppServices(
             ),
             cacheDir = cacheDir,
         )
+    }
+
+    /** Syncing with the player's other devices on the same network. */
+    val sync by lazy {
+        SyncService(backup, keys, filesDir, cacheDir, defaultName = deviceName, holdNetwork = holdNetwork)
     }
 
     private val aiCache by lazy { AiCacheRepo(db) }

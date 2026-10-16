@@ -20,7 +20,7 @@ package com.riffbuddy.data
  */
 internal object Schema {
 
-    const val VERSION = 10
+    const val VERSION = 12
 
     /**
      * Keyed by the version being upgraded *from*: `MIGRATIONS[1]` takes a v1
@@ -288,7 +288,88 @@ internal object Schema {
             // preset holds. JSON, read with defaults, so an older row is fine.
             "ALTER TABLE amps ADD COLUMN details_json TEXT",
         ),
+        10 to listOf(
+            // ---- The player's own scales and shapes -----------------------------
+            // kind is SCALE (a set of notes, drawn everywhere on the neck) or
+            // DOTS (exact strings and frets). notes is CustomShapes' own short
+            // text. A table rather than a setting, so a backup merge can tell
+            // one shape from another by its creation time and carry an edit
+            // made on another device.
+            """
+            CREATE TABLE custom_shapes (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                name        TEXT    NOT NULL,
+                kind        TEXT    NOT NULL,
+                root        INTEGER NOT NULL,
+                notes       TEXT    NOT NULL,
+                tuning      TEXT,
+                created_at  INTEGER NOT NULL,
+                updated_at  INTEGER NOT NULL
+            )
+            """,
+        ),
+        11 to listOf(
+            // ---- Deletions that travel ----------------------------------------
+            // A merge only ever adds, so an item deleted here would come back
+            // from the next device that still had it. Each deletion leaves a
+            // note of what was deleted (by the same identity a merge matches
+            // on) and when, and the note travels in backups and syncs so the
+            // other device can delete its copy too.
+            //
+            // Written by triggers rather than by each repository's delete, so
+            // no delete path can forget, including rows removed by a cascade.
+            """
+            CREATE TABLE deletions (
+                table_name  TEXT    NOT NULL,
+                identity    TEXT    NOT NULL,
+                deleted_at  INTEGER NOT NULL,
+                PRIMARY KEY (table_name, identity)
+            )
+            """,
+            // A session's items change after it starts (the session ends,
+            // songs are tagged, the log is edited), and a merge only carries a
+            // change it can see is newer. Null on older rows, which a merge
+            // reads as "no newer version", as it did before.
+            "ALTER TABLE sessions ADD COLUMN updated_at INTEGER",
+        ) + DELETION_TRIGGERS_V12.flatMap { (table, column) -> deletionTriggers(table, column) },
     )
+
+    /**
+     * The tables whose deletions are recorded, and the column a merge knows
+     * each item by. Frozen as of this migration: a later table gets its own
+     * trigger in its own migration, and `SchemaTest` checks none is missing.
+     */
+    val DELETION_TRIGGERS_V12: List<Pair<String, String>> get() = listOf(
+        "tunings" to "name", "songs" to "created_at", "song_parts" to "created_at",
+        "sessions" to "started_at", "tone_cards" to "created_at", "ai_messages" to "created_at",
+        "tab_files" to "sha256", "audio_files" to "created_at", "saved_loops" to "created_at",
+        "recordings" to "created_at", "backing_tracks" to "created_at", "lessons" to "created_at",
+        "homework" to "created_at", "routines" to "created_at", "custom_shapes" to "created_at",
+    )
+
+    /**
+     * Milliseconds since 1970 in SQLite's own terms, as the app writes its
+     * times: julianday counts days from 4714 BC, and 2440587.5 is 1970.
+     * INSERT OR REPLACE, so an item deleted, restored and deleted again
+     * keeps the later time.
+     *
+     * The second trigger is for an identity that changes: a session whose
+     * start time is corrected in the log, a tuning renamed. To another
+     * device that is a new item, so the old one is noted as deleted, or it
+     * would stay there beside the new one.
+     */
+    private fun deletionTriggers(table: String, column: String): List<String> {
+        val note = """
+            INSERT OR REPLACE INTO deletions (table_name, identity, deleted_at)
+            VALUES ('$table', CAST(OLD.$column AS TEXT),
+                    CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER));
+        """
+        return listOf(
+            "CREATE TRIGGER ${table}_deleted AFTER DELETE ON $table BEGIN $note END",
+            "CREATE TRIGGER ${table}_renamed AFTER UPDATE OF $column ON $table " +
+                "WHEN OLD.$column IS NOT NEW.$column BEGIN $note END",
+        )
+    }
 
     /**
      * What a brand-new install runs: v1, then every migration.
