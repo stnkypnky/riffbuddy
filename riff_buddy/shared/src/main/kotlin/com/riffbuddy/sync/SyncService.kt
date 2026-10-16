@@ -157,7 +157,11 @@ class SyncService(
             try {
                 while (true) {
                     val client = socket.accept()
+                    // Accepted just as the app went to the back: the answer is
+                    // canceled before it starts, so close the connection here,
+                    // or the other device waits minutes for a reply.
                     scope.launch(Dispatchers.IO) { answer(client) }
+                        .invokeOnCompletion { if (it != null) runCatching { client.close() } }
                 }
             } catch (e: Exception) {
                 // Closed by stop(), which also ends this loop, or the network went away.
@@ -209,7 +213,10 @@ class SyncService(
     // ---- Asking ------------------------------------------------------------
 
     /** Pairs with a device heard nearby, or at an address typed in. */
-    suspend fun pair(address: String) = talk("Pairing…", address) { link ->
+    suspend fun pair(address: String) = talk(
+        "Pairing…", address,
+        who = nearby.firstOrNull { it.address == address.trim() }?.peer?.name ?: address.trim(),
+    ) { link ->
         val (peer, secret) = SyncProtocol.askToPair(link, me, ::decide)
         remember(peer, secret, address)
         say("Paired with ${peer.name}. You can sync from either one now.")
@@ -226,16 +233,18 @@ class SyncService(
             problem = "This device lost its pairing with ${device.peer.name}. Unpair it and pair again."
             return
         }
-        talk("Syncing with ${device.peer.name}…", address) { link ->
+        talk("Syncing with ${device.peer.name}…", address, who = device.peer.name) { link ->
             val outcome = SyncProtocol.askToSync(link, me, device.peer, secret, data, cacheDir)
             synced(outcome.peer, address)
             say("Synced with ${outcome.peer.name}: ${outcome.here.words()} here, ${outcome.there.words()} there.")
         }
     }
 
-    private suspend fun talk(doing: String, address: String, block: suspend (SyncLink) -> Unit) {
+    private suspend fun talk(doing: String, address: String, who: String, block: suspend (SyncLink) -> Unit) {
         if (!oneAtATime.tryLock()) { problem = "A sync is already under way."; return }
         busy = doing; message = null; problem = null
+        // Failing to connect and failing partway have different fixes.
+        var connected = false
         try {
             withContext(Dispatchers.IO) {
                 Socket().use { s ->
@@ -243,17 +252,16 @@ class SyncService(
                     val host = address.trim().substringBefore(':')
                     val at = address.trim().substringAfter(':', "").toIntOrNull() ?: port
                     s.connect(InetSocketAddress(host, at), CONNECT_MS)
+                    connected = true
                     s.soTimeout = TIMEOUT_MS
                     block(SyncLink(s.getInputStream(), s.getOutputStream()))
                 }
             }
         } catch (e: SyncRefused) {
             problem = e.message
-        } catch (e: java.net.SocketTimeoutException) {
-            problem = "No answer from $address. Is Riff Buddy open there, on the same Wi-Fi?"
         } catch (e: java.io.IOException) {
             AppLog.w(TAG, "sync with $address failed", e)
-            problem = "Couldn't reach $address. Is Riff Buddy open there, on the same Wi-Fi? (${e.message})"
+            problem = SyncTrouble.advice(e, connected, who)
         } finally {
             busy = null
             oneAtATime.unlock()

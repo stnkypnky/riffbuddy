@@ -230,4 +230,28 @@ class SyncTest {
             other.close()
         }
     }
+
+    // ---- When a device can't be reached ---------------------------------------
+
+    @Test
+    fun `a failed connection is told apart by its error, as each platform words it`() {
+        val k = com.riffbuddy.sync.SyncTrouble::kind
+        // Android, word for word from a phone that couldn't find a computer on the network.
+        val android = java.net.ConnectException(
+            "failed to connect to /192.168.1.76 (port 47321) from /192.168.1.65 (port 43360) after 5000ms: " +
+                "isConnected failed: EHOSTUNREACH (No route to host)",
+        )
+        assertEquals(com.riffbuddy.sync.SyncTrouble.Kind.NOT_FOUND, k(android, false))
+        assertEquals(com.riffbuddy.sync.SyncTrouble.Kind.NOT_FOUND, k(java.net.NoRouteToHostException("No route to host"), false))
+        assertEquals(com.riffbuddy.sync.SyncTrouble.Kind.REFUSED, k(java.net.ConnectException("Connection refused"), false))
+        assertEquals(com.riffbuddy.sync.SyncTrouble.Kind.REFUSED, k(java.net.ConnectException("failed to connect: ECONNREFUSED (Connection refused)"), false))
+        assertEquals(com.riffbuddy.sync.SyncTrouble.Kind.REFUSED, k(java.net.SocketException("Connection reset by peer"), false))
+        assertEquals(com.riffbuddy.sync.SyncTrouble.Kind.NO_ANSWER, k(java.net.SocketTimeoutException("Connect timed out"), false))
+        assertEquals(com.riffbuddy.sync.SyncTrouble.Kind.DROPPED, k(java.net.SocketException("Connection reset"), true))
+        assertEquals(com.riffbuddy.sync.SyncTrouble.Kind.OTHER, k(java.io.IOException("Something else"), false))
+
+        val advice = com.riffbuddy.sync.SyncTrouble.advice(android, false, "the PC")
+        assertTrue(advice, advice.contains("try it from the PC instead"))
+        assertTrue(com.riffbuddy.sync.SyncTrouble.advice(java.net.SocketTimeoutException(), false, "the PC").contains("firewall"))
+    }
 }

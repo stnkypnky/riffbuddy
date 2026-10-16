@@ -183,4 +183,25 @@ class NearbySyncTest {
         blocker.close()
         withTimeout(10_000) { while (!phone.sync.listening) delay(50) }
     }
+
+    @Test
+    fun `syncing with a device whose app is closed says to open it there`() = runBlocking {
+        val phone = Device("Phone")
+        val tablet = Device("Tablet")
+        phone.sync.start(scope); tablet.sync.start(scope)
+        waitListening(phone, tablet)
+        val agreeing = agreeWhenAsked(phone, tablet)
+        withTimeout(15_000) { phone.sync.pair(tablet.address) }
+        agreeing.cancel()
+
+        tablet.sync.stop() // the tablet's app goes to the background
+        // Closing a listening socket can take a moment to reach the network;
+        // this test is about the message once it has, not about that moment.
+        withTimeout(5000) {
+            while (runCatching { java.net.Socket("127.0.0.1", tablet.port).close() }.isSuccess) delay(20)
+        }
+        withTimeout(15_000) { phone.sync.sync(phone.sync.devices.single().copy(address = tablet.address)) }
+        val problem = phone.sync.problem.orEmpty()
+        assertTrue(problem, problem.startsWith("Tablet is on the network, but Riff Buddy isn't open on it"))
+    }
 }

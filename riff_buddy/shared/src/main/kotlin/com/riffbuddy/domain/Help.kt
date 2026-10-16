@@ -876,19 +876,25 @@ object HelpCatalog {
             Faq(
                 if (Device.onComputer) "How do I keep this computer and a phone in step?"
                 else "How do I keep a tablet and a phone in step?",
-                "Sync them, under Sync with your other devices. Both on the same Wi-Fi, with Riff Buddy " +
-                    "open on both.\n\n" +
-                    "• Pair once: tap Pair beside the other device, check both screens show the same six " +
-                    "digits, and tap It matches on both.\n" +
-                    "• Then Sync now, from either one, whenever you like. Each gets what the other added, the " +
-                    "newer edit of anything wins, and something deleted on one is deleted on the other, unless " +
-                    "it was changed there after.\n" +
-                    "• Undo last sync puts this device back as it was just before.\n\n" +
-                    "Settings, gear and API keys stay as each device has them. If the other device isn't " +
-                    "listed, your router may keep devices apart: type the address its Settings shows.\n\n" +
-                    (if (Device.onComputer) "The first time, your computer may ask whether Riff Buddy can use " +
-                        "the network. Allow it on private networks, or the other devices can't reach it.\n\n" else "") +
-                    "No shared Wi-Fi? Export a backup here and Import it there, choosing Add to what is here.",
+                "Sync them: Sync with your other devices, on the same Wi-Fi, Riff Buddy open on both.\n\n" +
+                    "• Pair once: tap Pair, check both screens show the same six digits, tap It matches on both.\n" +
+                    "• Then Sync now on either. Each gets what the other added, the newer edit wins, and a " +
+                    "deletion carries across unless it was changed there after.\n" +
+                    "• Undo last sync puts this device back as it was.\n\n" +
+                    "Settings, gear and API keys stay as each device has them. Not listed? Type the address " +
+                    "the other device shows.\n\n" +
+                    (if (Device.onComputer) "If your computer asks whether Riff Buddy can use the network, allow " +
+                        "it on private networks.\n\n" else "") +
+                    "No shared Wi-Fi? Export here and Import there, with Add to what is here.",
+            ),
+            Faq(
+                "Sync says it can't reach my other device. What do I do?",
+                "The message says which it is:\n\n" +
+                    "• Not open there: open Riff Buddy on it, on screen.\n" +
+                    "• No answer: a computer's firewall is blocking it. Allow Riff Buddy on private networks " +
+                    "(Windows: Allow an app through firewall).\n" +
+                    "• Can't find it: start the sync from the other device instead; then both ways work. A " +
+                    "phone using a private Wi-Fi address can cause this.",
             ),
             Faq(
                 "How do I get a practice reminder?",
