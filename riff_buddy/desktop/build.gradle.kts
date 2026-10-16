@@ -245,6 +245,14 @@ tasks.register<JavaExec>("screenshots") {
     args = (providers.gradleProperty("shots").orNull ?: "build/shots 1100x820 shot:home").split(" ")
 }
 
+// The in-app help as JSON, for the illustrated guide (release/guide/make_guide.py).
+// Usage: ./gradlew :apps:riff_buddy:desktop:helpDump -Phelp="<out.json> phone|computer"
+tasks.register<JavaExec>("helpDump") {
+    classpath = sourceSets.test.get().runtimeClasspath
+    mainClass = "com.riffbuddy.desktop.HelpDumpKt"
+    args = (providers.gradleProperty("help").orNull ?: "build/help.json phone").split(" ")
+}
+
 // Remakes the installers' icons and the launch splash from the master SVGs.
 // Run after changing the icon, and commit desktop/icons/ and desktop/launch/.
 tasks.register<JavaExec>("icons") {

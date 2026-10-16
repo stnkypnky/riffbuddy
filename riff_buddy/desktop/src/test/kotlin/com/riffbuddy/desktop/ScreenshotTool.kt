@@ -16,6 +16,13 @@ import androidx.compose.ui.text.platform.Font
 import androidx.compose.ui.unit.Density
 import com.riffbuddy.AppServices
 import com.riffbuddy.ai.OnlineCheck
+import com.riffbuddy.ai.ProviderId
+import com.riffbuddy.data.SecureStore
+import com.riffbuddy.sync.SyncService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import com.riffbuddy.platform.LocalPlatform
 import com.riffbuddy.ui.LocalShortcuts
 import com.riffbuddy.ui.Shortcut
@@ -34,10 +41,16 @@ import javax.swing.SwingUtilities
  *   ScreenshotTool <out-dir> <width>x<height> step...
  *   steps:  shot:NAME   click:X,Y   wait:MS   drop:PATH (as if dragged onto the window)
  *           key:NAME, such as key:space, key:ctrl+2, key:shift+up (as if typed on the window)
+ *           scroll:X,Y,LINES (a mouse wheel; positive scrolls down)
+ *           peer:NAME — another device called NAME appears on the network (id "peer-name")
+ *           pair:NAME — that device asks to pair, so the six digits show
  *
  * The app runs against a fresh database in <out-dir>/data, so nothing real is
- * touched. Motion is off, so screens are caught at rest; set RIFF_MOTION=1 to
- * catch the opening animation instead.
+ * touched: keys are held in memory, not the system keychain, and sync uses
+ * its own port, so real devices on the network never appear. Motion is off,
+ * so screens are caught at rest; set RIFF_MOTION=1 to catch the opening
+ * animation instead. RIFF_DENSITY=2 renders at twice the pixels, as a phone
+ * screenshot is; coordinates are then in those pixels.
  */
 @OptIn(ExperimentalComposeUiApi::class, InternalComposeUiApi::class)
 fun main(args: Array<String>) {
@@ -49,12 +62,18 @@ fun main(args: Array<String>) {
         db = JdbcDb(File(data, "riffbuddy.db")),
         audioOutputs = DesktopAudioOutputs(),
         audioInputs = DesktopAudioInputs(),
-        keys = DesktopSecureStore(),
+        keys = MemoryKeys(),
         isOnline = OnlineCheck { true },
         filesDir = data,
         cacheDir = File(out, "cache").apply { mkdirs() },
         appVersion = "screenshot",
+        deviceName = "This computer",
+        syncPort = TOOL_SYNC_PORT,
     )
+    val density = System.getenv("RIFF_DENSITY")?.toFloatOrNull() ?: 1f
+    // Other devices, for showing sync: each its own data, the tool's port.
+    val peerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    val peers = mutableMapOf<String, SyncService>()
     val platform = DesktopPlatform(services, data, File(out, "cache"))
     val condensed = FontFamily(
         Font("fonts/RobotoCondensed.ttf", FontWeight.Normal),
@@ -70,7 +89,7 @@ fun main(args: Array<String>) {
     // The window's keys, as Main sets them up.
     val shortcuts = ShortcutRegistry(listOf(Shortcut("Esc", "Go back", listOf(Key.Escape)) { platform.handleBack() }))
     val motion = System.getenv("RIFF_MOTION")
-    val scene = onUi { ImageComposeScene(w, h, Density(1f)) {
+    val scene = onUi { ImageComposeScene((w * density).toInt(), (h * density).toInt(), Density(density)) {
         RiffBuddyTheme(condensedFont = condensed, systemReducedMotion = motion == null) {
             CompositionLocalProvider(LocalPlatform provides platform, LocalShortcuts provides shortcuts) {
                 RiffBuddyContent(services, overlay = { com.riffbuddy.ui.Intro() })
@@ -138,6 +157,25 @@ fun main(args: Array<String>) {
                 }
                 settle(500)
             }
+            "peer" -> {
+                val id = "peer-" + value.lowercase().replace(' ', '-')
+                val dir = File(out, "peers/$id/sync").apply { mkdirs() }
+                File(dir, "devices.json").writeText("""{"id":"$id","name":"$value","devices":[]}""")
+                val keys = MemoryKeys()
+                val peerData = File(out, "peers/$id")
+                val peer = SyncService(
+                    services.backup, keys, peerData, File(peerData, "cache"),
+                    defaultName = value, port = TOOL_SYNC_PORT,
+                )
+                peer.start(peerScope)
+                peers[value] = peer
+                settle(2500)
+            }
+            "pair" -> {
+                val peer = peers.getValue(value)
+                peerScope.launch { peer.pair("127.0.0.1:$TOOL_SYNC_PORT") }
+                settle(1500)
+            }
             "shot" -> {
                 val png = onUi { scene.render(System.nanoTime() - start) }.encodeToData(EncodedImageFormat.PNG)!!.bytes
                 File(out, "$value.png").writeBytes(png)
@@ -161,3 +199,18 @@ private val KEYS: Map<String, Pair<Int, Char>> = mapOf(
     "left" to (AwtKey.VK_LEFT to AwtKey.CHAR_UNDEFINED), "right" to (AwtKey.VK_RIGHT to AwtKey.CHAR_UNDEFINED),
 ) + ('a'..'z').associate { it.toString() to (AwtKey.getExtendedKeyCodeForChar(it.code) to it) } +
     ('1'..'5').associate { it.toString() to (AwtKey.getExtendedKeyCodeForChar(it.code) to it) }
+
+/** Off the real sync port, so a screenshot never shows (or talks to) real devices. */
+private const val TOOL_SYNC_PORT = 47391
+
+/** Keys for this run only: the tool never writes to the computer's keychain. */
+private class MemoryKeys : SecureStore {
+    private val keys = mutableMapOf<String, String>()
+    override fun put(provider: ProviderId, apiKey: String) { keys[provider.name] = apiKey }
+    override fun get(provider: ProviderId): String? = keys[provider.name]
+    override fun remove(provider: ProviderId) { keys.remove(provider.name) }
+    override fun clear() = keys.clear()
+    override fun putSecret(name: String, value: String) { keys["secret:$name"] = value }
+    override fun getSecret(name: String): String? = keys["secret:$name"]
+    override fun removeSecret(name: String) { keys.remove("secret:$name") }
+}

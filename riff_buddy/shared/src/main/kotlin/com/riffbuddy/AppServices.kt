@@ -66,6 +66,8 @@ class AppServices(
     deviceName: String = "This device",
     /** Held while syncing is open: a phone drops broadcasts without it. */
     holdNetwork: () -> AutoCloseable = { AutoCloseable {} },
+    /** Where sync listens and announces; a tool rendering screens keeps off the real one. */
+    syncPort: Int = SyncService.PORT,
 ) {
     val repo by lazy { Repo(db) }
     val presets by lazy { PresetRepo(db) }
@@ -126,7 +128,7 @@ class AppServices(
 
     /** Syncing with the player's other devices on the same network. */
     val sync by lazy {
-        SyncService(backup, keys, filesDir, cacheDir, defaultName = deviceName, holdNetwork = holdNetwork)
+        SyncService(backup, keys, filesDir, cacheDir, defaultName = deviceName, holdNetwork = holdNetwork, port = syncPort)
     }
 
     private val aiCache by lazy { AiCacheRepo(db) }
