@@ -51,6 +51,8 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: riff_buddy/web/build/dist/wasmJs/productionExecutable
+          # Deployed minutes later; kept no longer, to spare the storage quota.
+          retention-days: 1
 
   deploy:
     needs: build

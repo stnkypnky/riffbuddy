@@ -153,8 +153,10 @@ fun HomeScreen(
                 }
             }
 
-            val week: @Composable () -> Unit = {
-                WeekCard(weekMinutes, weekSessions, streak, onOpenStats)
+            // fill: stretch to the height it is given, only when nothing
+            // shares its column; above the recent songs it keeps its own height.
+            val week: @Composable (fill: Boolean) -> Unit = { fill ->
+                WeekCard(weekMinutes, weekSessions, streak, onOpenStats, fill)
             }
             val recent = songs.sortedByDescending { it.updatedAt }.take(4)
             val recentCard: (@Composable () -> Unit)? = if (recent.isEmpty()) null else {
@@ -171,16 +173,16 @@ fun HomeScreen(
                     Box(Modifier.weight(1f).fillMaxHeight(), propagateMinConstraints = true) { todayPlan() }
                     Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(Space.lg)) {
                         if (recentCard == null) {
-                            Box(Modifier.weight(1f), propagateMinConstraints = true) { week() }
+                            Box(Modifier.weight(1f), propagateMinConstraints = true) { week(true) }
                         } else {
-                            week()
+                            week(false)
                             Box(Modifier.weight(1f), propagateMinConstraints = true) { recentCard() }
                         }
                     }
                 }
             } else {
                 todayPlan()
-                week()
+                week(false)
                 recentCard?.invoke()
             }
             Spacer(Modifier.size(Space.sm))
@@ -425,10 +427,10 @@ private fun QuickStartTile(tile: QuickTile) {
 
 /** A glance at the week, and the way into Stats. */
 @Composable
-private fun WeekCard(weekMinutes: Long, weekSessions: Int, streak: Int, onOpenStats: () -> Unit) {
+private fun WeekCard(weekMinutes: Long, weekSessions: Int, streak: Int, onOpenStats: () -> Unit, fill: Boolean) {
     Panel(Modifier.fillMaxWidth()) {
         Column(
-            Modifier.fillMaxWidth().fillMaxHeight()
+            Modifier.fillMaxWidth().then(if (fill) Modifier.fillMaxHeight() else Modifier)
                 .tactileClickable(onClickLabel = "Open stats", onClick = onOpenStats)
                 .padding(Space.panel),
             verticalArrangement = Arrangement.spacedBy(Space.md),

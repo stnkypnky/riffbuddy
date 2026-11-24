@@ -1,66 +1,121 @@
-# Riff Buddy
+<div align="center">
 
-**A guitar practice companion that runs in your browser,** on a phone,
-tablet or computer. It has a metronome, a tuner and a songbook, shows scales
-and chords on the neck (and plays them for you), plays tabs, loops and slows
-songs down, records you, builds backing tracks, and has an AI coach that
-tells you where to set the knobs on *your* amp for a song.
+# 🎸 Riff Buddy
 
-It's free, works offline, and has no account, ads or tracking.
+### Your practice buddy for every guitar player
 
-## ▶ [Open Riff Buddy](https://stnkypnky.github.io/riffbuddy/)
+Tune up, lock in with the click, loop the tricky bit, and watch yourself
+get better. Whether you're learning your first three chords or tightening
+up a set list, Riff Buddy is here to make practice the fun part.
 
-Nothing to install: open the link and play. The first visit downloads the
-app; after that it opens and runs with no internet.
+## ▶ [Play now in your browser](https://stnkypnky.github.io/riffbuddy/)
 
-> 📘 **New here? Read the [illustrated guide (PDF)](docs/Riff-Buddy-Guide.pdf).**
-> It walks through setup and every screen with pictures.
+**Free** · **No sign-up** · **Works offline** · **Phone, tablet or computer**
+
+<img src="docs/screenshots/home.png" alt="Riff Buddy's home screen: a 9-day streak, quick-start tiles, today's routine and recent songs" width="900">
+
+</div>
 
 ---
 
-## Get started in 3 steps
+## What's in the case
 
-### 1. Open it (and keep it, if you like)
+### 🤖 A coach in your corner
+Ask anything: how to clean up a chord change, what to practice for the next
+half hour, or where to set the knobs on *your* amp to get a song's tone. The
+coach knows your guitar, your amp and the songs you're learning, and pitches
+its answers at your level. Not sure what to ask? It starts you off with
+ideas from your own songbook.
 
-Open **[Riff Buddy](https://stnkypnky.github.io/riffbuddy/)** in a current browser: Chrome, Edge,
-Firefox or Safari. Allow the microphone when the tuner or recorder asks.
+<img src="docs/screenshots/coach.png" alt="The coach greeting the player, with question ideas about their own songs" width="900">
 
-To give it its own icon and window, install it from the browser. It's still
-the web app, just one tap away:
+### 🥁 A metronome that pushes you (gently)
+Type any tempo, tap one in, or let the speed trainer creep it up a few BPM
+every few bars until that riff is up to speed.
+
+<img src="docs/screenshots/metronome.png" alt="The metronome at 100 BPM beside the speed trainer's setup" width="900">
+
+### 📖 A songbook that keeps score
+Every song you're working on, from wishlist to mastered, with how close you
+are to full speed, its key and capo, and a quick link to find the tab.
+
+<img src="docs/screenshots/song.png" alt="The songbook beside a song's page, showing 82 of 100 BPM" width="900">
+
+### 🎼 Theory you can see (and hear)
+Scales, chords and keys right on the neck, in fret numbers, not sheet music.
+Step through the positions and tap **Play** to hear them.
+
+<img src="docs/screenshots/theory.png" alt="The A minor pentatonic scale across the whole neck" width="900">
+
+### …and a whole pedalboard more
+- 🎯 **Tuner**, with a reference note for every string
+- 🔁 **Looper** that slows a song down without changing its pitch
+- 📜 **Tab player** that plays along with you
+- 🎙️ **Recorder** to hear how you really sound
+- 🎹 **Backing tracks** to jam over, in the key and tempo you pick
+- 🔥 **Streaks, routines, lessons and stats** to keep you coming back
+
+### 📱 Made for your phone, too
+
+<img src="docs/screenshots/phones.png" alt="Home, Coach and Metronome on a phone, in three color schemes" width="900">
+
+### 🎨 Pick your finish
+Ten color schemes named after classic guitar finishes: Sunburst, Cherry,
+Rosewood, Ebony, Mahogany, Surf Green and Lake Placid Blue, or go light with
+Maple, Olympic White and Butterscotch. Find them in **Me › Settings ›
+Appearance**.
+
+<img src="docs/screenshots/finishes.png" alt="The home screen in seven of the finishes" width="900">
+
+---
+
+## Get playing in 3 steps
+
+### 1. Open it
+
+Open **[Riff Buddy](https://stnkypnky.github.io/riffbuddy/)** in Chrome, Edge, Firefox or Safari. That's
+it: no download, no account. The first visit saves the app on your device,
+so after that it opens even with no internet. Allow the microphone when the
+tuner or recorder asks.
+
+**Want it on your home screen?** Install it from the browser and it gets its
+own icon and window:
 - **iPhone or iPad** (iOS 18.2 or newer): in Safari, tap **Share**, then
   **Add to Home Screen**, and open it from there. Installed, Safari keeps
   your practice; as a plain web page it may clear it after weeks unvisited.
 - **Android:** Chrome › **⋮** › **Install app**.
 - **Computer:** the install icon at the right of Chrome's or Edge's address bar.
 
-What the browser can't do, and what it does instead:
+A few things a browser can't do, and what Riff Buddy does instead:
 - It can't sync with your other devices itself: **Export** a backup and
   **Import** it on the other device.
 - Reminders come only while it's open, so **Add to my calendar** lets your
   calendar remind you.
 - Takes are shared as WAV.
 
-Want a native app instead? See [Install an app (optional)](#install-an-app-optional) below.
+Rather have a regular app? See [Install an app (optional)](#install-an-app-optional).
 
-### 2. Set it up (about 3 minutes, all skippable)
+### 2. Say hi (about 3 minutes, all skippable)
 
-The first launch walks you through three short steps:
+The first launch asks three quick things:
 
-1. **About you:** how long you've played and what you like. The coach
-   pitches its answers at your level.
+1. **About you:** how long you've played and what you're into, so the coach
+   talks at your level.
 2. **The coach:** an optional free AI key (see below).
-3. **Your gear:** tap **+ Add** under Guitars, then under Amps. Type the make and
-   model and tap **Fill in with the coach**, and it drafts the knobs, amp
-   models and effects for you to check. The first guitar and amp you add
-   become your rig.
+3. **Your gear:** tap **+ Add** under Guitars, then under Amps. Type the make
+   and model, tap **Fill in with the coach**, and it drafts the knobs, amp
+   models and effects for you to check.
 
-You can skip anything and come back later in **Me › Settings**.
+Skip anything you like and come back later in **Me › Settings**.
 
-### 3. Play
+### 3. Play!
 
-Start with **Tools**: the metronome, the tuner and **Theory**. In Theory,
-pick a scale, step through its positions with ◀ ▶, and tap **Play** to hear
-it. Every screen has a **?** in the corner with answers for that screen.
+Start with **Tools**: tune up, start the click, then open **Theory**, pick a
+scale and tap **Play** to hear it. Stuck anywhere? Every screen has a **?**
+in the corner with answers for that screen.
+
+> 📘 **Want the full tour?** The [illustrated guide (PDF)](docs/Riff-Buddy-Guide.pdf)
+> walks through every screen.
 
 ---
 
@@ -136,10 +191,10 @@ the Riff Buddy window.) On a computer:
 
 ## The AI coach (free, optional)
 
-The coach writes **tone cards**: for a song and part, where to set every
+Everything else in Riff Buddy works without it, but the coach is a lot of
+fun. It writes **tone cards**: for a song and part, where to set every
 knob on your amp, which amp model and effects to use, and which pickup to
-play on. It also answers practice questions. Everything else in the app
-works without it.
+play on. It also answers any practice question you throw at it.
 
 It needs a free key from any **one** of these. None needs a credit card:
 
@@ -165,16 +220,6 @@ them, and they're never used unless you choose them: tap
 **Ready · answering with …** (or **Change who answers…** in the coach's
 options) to pick a provider and model. **Use paid providers as a fallback**
 is off unless you turn it on.
-
----
-
-## Make it yours
-
-**Me › Settings › Appearance** has ten color schemes named after guitar
-finishes, seven dark (Sunburst, Cherry, Rosewood, Ebony, Mahogany, Surf Green,
-Lake Placid Blue) and three light (Maple, Olympic White, Butterscotch). Every
-speed and setting can be typed as well as picked: tap the number.
-
 
 ---
 
@@ -212,6 +257,8 @@ speed and setting can be typed as well as picked: tap the number.
 
 Still stuck? Tap **?** on the screen you're on. Most questions are answered
 there, and **Ask the Coach** takes it from there.
+
+**Now go play something. 🤘**
 
 ---
 

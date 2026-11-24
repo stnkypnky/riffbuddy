@@ -62,6 +62,10 @@ jobs:
           name: riffbuddy-${{ runner.os }}
           path: ${{ matrix.installer }}
           if-no-files-found: error
+          # Only the release job below needs these, minutes later. A private
+          # repository's artifact storage is small, and the default 90 days
+          # filled it after a few releases.
+          retention-days: 1
 
   release:
     needs: build

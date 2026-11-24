@@ -60,11 +60,12 @@ fun main(args: Array<String>) {
     val (w, h) = args[1].split("x").map { it.toInt() }
     val data = File(out, "data").apply { mkdirs() }
     LinuxFonts.prepare(File(out, "cache").apply { mkdirs() })
+    val memoryKeys = MemoryKeys()
     val services = AppServices(
         db = JdbcDb(File(data, "riffbuddy.db")),
         audioOutputs = DesktopAudioOutputs(),
         audioInputs = DesktopAudioInputs(),
-        keys = MemoryKeys(),
+        keys = memoryKeys,
         isOnline = OnlineCheck { true },
         filesDir = data.toOkioPath(),
         cacheDir = File(out, "cache").apply { mkdirs() }.toOkioPath(),
@@ -79,6 +80,13 @@ fun main(args: Array<String>) {
     // RIFF_FINISH=<finish id> shoots the app in that color scheme.
     System.getenv("RIFF_FINISH")?.let { id ->
         kotlinx.coroutines.runBlocking { services.repo.putSetting(com.riffbuddy.data.Repo.FINISH, id) }
+    }
+    // RIFF_DEMO=1 fills an empty database with made-up songs, practice and
+    // gear, for screenshots that show the app in use rather than empty.
+    if (System.getenv("RIFF_DEMO") == "1") {
+        // A stand-in key, so the coach shows itself ready. Nothing is ever sent.
+        memoryKeys.put(ProviderId.GROQ, "demo")
+        kotlinx.coroutines.runBlocking { seedDemo(services) }
     }
     // Everything touching the scene runs on the window thread, as in the real
     // app: the tab player updates its state there.
@@ -220,4 +228,48 @@ private class MemoryKeys : SecureStore {
     override fun putSecret(name: String, value: String) { keys["secret:$name"] = value }
     override fun getSecret(name: String): String? = keys["secret:$name"]
     override fun removeSecret(name: String) { keys.remove("secret:$name") }
+}
+
+/**
+ * Made-up data for RIFF_DEMO: traditional tunes at different stages, about
+ * two weeks of practice and a starter rig. Only fills an empty database, so
+ * shots taken in the same out-dir keep the same data.
+ */
+private suspend fun seedDemo(services: AppServices) {
+    if (services.songs.all().isNotEmpty()) return
+    val now = kotlin.time.Clock.System.now()
+    val day = kotlin.time.Duration.parse("1d")
+    val songs = listOf(
+        com.riffbuddy.domain.Song(title = "House of the Rising Sun", artist = "Traditional",
+            status = com.riffbuddy.domain.SongStatus.POLISHING, key = "Am", timeSignature = "6/8",
+            targetBpm = 120, currentBpm = 104, tags = "arpeggios, campfire"),
+        com.riffbuddy.domain.Song(title = "Greensleeves", artist = "Traditional",
+            status = com.riffbuddy.domain.SongStatus.LEARNING, key = "Em", timeSignature = "3/4",
+            targetBpm = 96, currentBpm = 70, tags = "fingerstyle"),
+        com.riffbuddy.domain.Song(title = "Scarborough Fair", artist = "Traditional",
+            status = com.riffbuddy.domain.SongStatus.LEARNING, key = "Dm", timeSignature = "3/4",
+            targetBpm = 100, currentBpm = 82, capo = 2),
+        com.riffbuddy.domain.Song(title = "Wildwood Flower", artist = "Traditional",
+            status = com.riffbuddy.domain.SongStatus.WISHLIST, key = "C", targetBpm = 110),
+        com.riffbuddy.domain.Song(title = "Amazing Grace", artist = "Traditional",
+            status = com.riffbuddy.domain.SongStatus.MASTERED, key = "G", timeSignature = "3/4",
+            targetBpm = 80, currentBpm = 80, masteredAt = now - day * 9),
+        com.riffbuddy.domain.Song(title = "12-Bar Blues in A", artist = "Practice",
+            status = com.riffbuddy.domain.SongStatus.PERFORMANCE_READY, key = "A",
+            targetBpm = 100, currentBpm = 100, tags = "blues, shuffle"),
+    )
+    songs.forEachIndexed { i, s -> services.songs.save(s, now - day * (20 - i)) }
+    // Practice on most of the last two weeks, so the streak and charts have shape.
+    val minutes = listOf(25, 18, 22, 32, 20, 15, 40, 12, 22, 0, 12, 35, 19, 26)
+    minutes.forEachIndexed { daysAgo, m ->
+        if (m > 0) services.sessions.addManual(now - day * daysAgo - kotlin.time.Duration.parse("2h"), m * 60L, 4, "")
+    }
+    // A starter routine, chosen, so Today's plan has steps to show.
+    val routine = services.plan.saveRoutine(com.riffbuddy.domain.RoutineTemplates.DAILY_20)
+    services.repo.putSetting(com.riffbuddy.data.PlanRepo.SELECTED_ROUTINE, routine.toString())
+    services.gear.saveGuitar(0, "Pacifica",
+        com.riffbuddy.domain.gear.GuitarProfile(make = "Yamaha", model = "Pacifica 112V"), null)
+    services.gear.saveAmp(0, "Katana",
+        com.riffbuddy.domain.gear.AmpProfile(make = "Boss", model = "Katana 50", kind = com.riffbuddy.domain.gear.AmpKind.MODELING,
+            controls = listOf("Gain", "Volume", "Bass", "Middle", "Treble").map { com.riffbuddy.domain.gear.AmpControl(it) }))
 }
