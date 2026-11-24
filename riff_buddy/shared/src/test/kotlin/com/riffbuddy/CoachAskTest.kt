@@ -13,7 +13,7 @@ import com.riffbuddy.ui.tone.MarkdownParser
 import com.riffbuddy.ui.tone.MdBlock
 import com.riffbuddy.ui.tone.MdSpan
 import kotlinx.coroutines.runBlocking
-import org.json.JSONObject
+import com.riffbuddy.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

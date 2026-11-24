@@ -3,6 +3,7 @@ package com.riffbuddy
 import com.riffbuddy.audio.Wav
 import com.riffbuddy.audio.WavWriter
 import java.io.File
+import okio.Path.Companion.toOkioPath
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.file.Files
@@ -29,17 +30,17 @@ class WavTest {
     fun `a slice is exactly the selected frames`() {
         val src = File(dir, "take.wav")
         val samples = ShortArray(48_000) { (it % 1000).toShort() }
-        WavWriter(src, 48_000).use { it.write(samples, samples.size) }
+        WavWriter(src.toOkioPath(), 48_000).use { it.write(samples, samples.size) }
 
         val clip = File(dir, "clip.wav")
-        assertEquals(9_600, Wav.slice(src, 12_000, 21_600, clip))
-        val pcm = Wav.read(clip)
+        assertEquals(9_600, Wav.slice(src.toOkioPath(), 12_000, 21_600, clip.toOkioPath()))
+        val pcm = Wav.read(clip.toOkioPath())
         assertEquals(48_000, pcm.sampleRate)
         assertArrayEquals(samples.copyOfRange(12_000, 21_600), pcm.samples)
         assertEquals(9_600 * 2, dataSize(clip))
 
         // A selection dragged past the end keeps what exists.
-        assertEquals(8_000, Wav.slice(src, 40_000, 99_999, File(dir, "tail.wav")))
+        assertEquals(8_000, Wav.slice(src.toOkioPath(), 40_000, 99_999, File(dir, "tail.wav").toOkioPath()))
     }
 
     @Test
@@ -53,7 +54,7 @@ class WavTest {
     fun `a take written in pieces reads back sample for sample`() {
         val f = File(dir, "take.wav")
         val samples = ShortArray(50_000) { ((it * 37) % 65536 - 32768).toShort() }
-        WavWriter(f, 48_000).use { w ->
+        WavWriter(f.toOkioPath(), 48_000).use { w ->
             var i = 0
             while (i < samples.size) {
                 val n = minOf(777, samples.size - i)
@@ -61,7 +62,7 @@ class WavTest {
                 i += n
             }
         }
-        val pcm = Wav.read(f)
+        val pcm = Wav.read(f.toOkioPath())
         assertEquals(48_000, pcm.sampleRate)
         assertArrayEquals(samples, pcm.samples)
         assertEquals(50_000 * 2, dataSize(f))
@@ -71,31 +72,31 @@ class WavTest {
     @Test
     fun `a take cut off before Stop is repaired, not lost`() {
         val f = File(dir, "cut.wav")
-        val w = WavWriter(f, 48_000)
+        val w = WavWriter(f.toOkioPath(), 48_000)
         w.write(ShortArray(4800) { 1000 }, 4800)
         // No close(): the app died here. Simulate the file as it would be left.
         val raf = java.io.RandomAccessFile(f, "r"); raf.close()
         assertEquals(0, dataSize(f))
 
-        assertTrue(Wav.repair(f))
+        assertTrue(Wav.repair(f.toOkioPath()))
         assertEquals(9600, dataSize(f))
-        assertEquals(4800, Wav.read(f).frames)
+        assertEquals(4800, Wav.read(f.toOkioPath()).frames)
     }
 
     @Test
     fun `repair trims half a sample left by a cut-off write`() {
         val f = File(dir, "odd.wav")
         f.writeBytes(Wav.header(44_100, 0) + ByteArray(101))
-        assertTrue(Wav.repair(f))
+        assertTrue(Wav.repair(f.toOkioPath()))
         assertEquals(Wav.HEADER_BYTES + 100L, f.length())
     }
 
     @Test
     fun `repairing a healthy take changes nothing`() {
         val f = File(dir, "ok.wav")
-        WavWriter(f, 48_000).use { it.write(ShortArray(100), 100) }
+        WavWriter(f.toOkioPath(), 48_000).use { it.write(ShortArray(100), 100) }
         val before = f.readBytes()
-        assertFalse(Wav.repair(f))
+        assertFalse(Wav.repair(f.toOkioPath()))
         assertArrayEquals(before, f.readBytes())
     }
 
@@ -104,7 +105,7 @@ class WavTest {
     fun `reading trusts the file length over a zero header`() {
         val f = File(dir, "zero.wav")
         f.writeBytes(Wav.header(48_000, 0) + ByteArray(400))
-        assertEquals(200, Wav.read(f).frames)
+        assertEquals(200, Wav.read(f.toOkioPath()).frames)
     }
 
     /** The bundled sample recordings are WAVs from Python's wave module. */
@@ -112,7 +113,7 @@ class WavTest {
     fun `the bundled sample recordings read`() {
         val tone = generateSequence(File("").absoluteFile) { it.parentFile }
             .map { File(it, "src/main/assets/samples/a440-test-tone.wav") }.first { it.exists() }
-        val pcm = Wav.read(tone)
+        val pcm = Wav.read(tone.toOkioPath())
         assertEquals(22_050, pcm.sampleRate)
         assertEquals(22_050 * 15, pcm.frames)
     }
@@ -124,13 +125,13 @@ class WavTest {
         val body = ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN)
             .putShort(100).putShort(300).putShort(-200).putShort(200).array()
         f.writeBytes(header + body)
-        assertArrayEquals(shortArrayOf(200, 0), Wav.read(f).samples)
+        assertArrayEquals(shortArrayOf(200, 0), Wav.read(f.toOkioPath()).samples)
     }
 
     @Test(expected = IllegalArgumentException::class)
     fun `something that is not a WAV is refused`() {
         val f = File(dir, "x.wav")
         f.writeBytes("definitely not audio".toByteArray())
-        Wav.read(f)
+        Wav.read(f.toOkioPath())
     }
 }

@@ -8,7 +8,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
-import java.awt.event.KeyEvent as AwtKey
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -18,20 +17,23 @@ import com.riffbuddy.AppServices
 import com.riffbuddy.ai.OnlineCheck
 import com.riffbuddy.ai.ProviderId
 import com.riffbuddy.data.SecureStore
+import com.riffbuddy.platform.LocalPlatform
 import com.riffbuddy.sync.SyncService
+import com.riffbuddy.sync.nearbySync
+import com.riffbuddy.ui.LocalShortcuts
+import com.riffbuddy.ui.RiffBuddyContent
+import com.riffbuddy.ui.Shortcut
+import com.riffbuddy.ui.ShortcutRegistry
+import com.riffbuddy.ui.theme.RiffBuddyTheme
+import java.awt.event.KeyEvent as AwtKey
+import java.io.File
+import javax.swing.SwingUtilities
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import com.riffbuddy.platform.LocalPlatform
-import com.riffbuddy.ui.LocalShortcuts
-import com.riffbuddy.ui.Shortcut
-import com.riffbuddy.ui.ShortcutRegistry
-import com.riffbuddy.ui.RiffBuddyContent
-import com.riffbuddy.ui.theme.RiffBuddyTheme
+import okio.Path.Companion.toOkioPath
 import org.jetbrains.skia.EncodedImageFormat
-import java.io.File
-import javax.swing.SwingUtilities
 
 /**
  * Renders the real desktop app off-screen and saves what it shows, so the UI
@@ -64,21 +66,20 @@ fun main(args: Array<String>) {
         audioInputs = DesktopAudioInputs(),
         keys = MemoryKeys(),
         isOnline = OnlineCheck { true },
-        filesDir = data,
-        cacheDir = File(out, "cache").apply { mkdirs() },
+        filesDir = data.toOkioPath(),
+        cacheDir = File(out, "cache").apply { mkdirs() }.toOkioPath(),
         appVersion = "screenshot",
-        deviceName = "This computer",
-        syncPort = TOOL_SYNC_PORT,
     )
+    val sync = services.nearbySync(deviceName = "This computer", port = TOOL_SYNC_PORT)
     val density = System.getenv("RIFF_DENSITY")?.toFloatOrNull() ?: 1f
     // Other devices, for showing sync: each its own data, the tool's port.
     val peerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val peers = mutableMapOf<String, SyncService>()
     val platform = DesktopPlatform(services, data, File(out, "cache"))
-    val condensed = FontFamily(
-        Font("fonts/RobotoCondensed.ttf", FontWeight.Normal),
-        Font("fonts/RobotoCondensed.ttf", FontWeight.Medium),
-    )
+    // RIFF_FINISH=<finish id> shoots the app in that color scheme.
+    System.getenv("RIFF_FINISH")?.let { id ->
+        kotlinx.coroutines.runBlocking { services.repo.putSetting(com.riffbuddy.data.Repo.FINISH, id) }
+    }
     // Everything touching the scene runs on the window thread, as in the real
     // app: the tab player updates its state there.
     fun <T> onUi(block: () -> T): T {
@@ -90,9 +91,15 @@ fun main(args: Array<String>) {
     val shortcuts = ShortcutRegistry(listOf(Shortcut("Esc", "Go back", listOf(Key.Escape)) { platform.handleBack() }))
     val motion = System.getenv("RIFF_MOTION")
     val scene = onUi { ImageComposeScene((w * density).toInt(), (h * density).toInt(), Density(density)) {
-        RiffBuddyTheme(condensedFont = condensed, systemReducedMotion = motion == null) {
+        RiffBuddyTheme(condensedFont = AppFonts.condensed, textFont = AppFonts.text, systemReducedMotion = motion == null) {
             CompositionLocalProvider(LocalPlatform provides platform, LocalShortcuts provides shortcuts) {
-                RiffBuddyContent(services, overlay = { com.riffbuddy.ui.Intro() })
+                RiffBuddyContent(
+                    services,
+                    syncSection = { com.riffbuddy.ui.settings.SyncSection(sync) },
+                    syncHost = { com.riffbuddy.ui.settings.SyncHost(sync) },
+                    dataChanges = { sync.dataVersion },
+                    overlay = { com.riffbuddy.ui.Intro() },
+                )
             }
         }
     } }

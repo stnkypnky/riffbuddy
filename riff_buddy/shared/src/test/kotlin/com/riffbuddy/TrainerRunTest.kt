@@ -2,12 +2,13 @@ package com.riffbuddy
 
 import com.riffbuddy.audio.TimeSignature
 import com.riffbuddy.audio.TrainerRun
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.Instant
 
 /** A trainer run offered to the log, and a song's time signature read. */
 class TrainerRunTest {
@@ -18,7 +19,7 @@ class TrainerRunTest {
     fun `a run logs its start, the fastest it reached, and its length`() {
         val run = TrainerRun(startBpm = 60, reachedBpm = 60, startedAt = t0, songId = 7)
             .seen(65).seen(70).seen(65)          // a "Repeat" dropped back
-        val item = run.toItem(t0.plusSeconds(180))
+        val item = run.toItem((t0 + (180).seconds))
         assertEquals(60, item.bpmStart)
         assertEquals(70, item.bpmEnd)
         assertEquals(180, item.seconds)
@@ -29,8 +30,8 @@ class TrainerRunTest {
     @Test
     fun `a start pressed and stopped again is not offered`() {
         val run = TrainerRun(60, 60, t0)
-        assertFalse(run.worthOffering(t0.plusSeconds(5)))
-        assertTrue(run.worthOffering(t0.plusSeconds(15)))
+        assertFalse(run.worthOffering((t0 + (5).seconds)))
+        assertTrue(run.worthOffering((t0 + (15).seconds)))
     }
 
     @Test

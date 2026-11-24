@@ -19,7 +19,10 @@ plugins {
 kotlin {
     jvmToolchain(21)
     sourceSets {
-        main { kotlin.srcDir("../shared/src/main/kotlin") }
+        main {
+            kotlin.srcDir("../shared/src/commonMain/kotlin")
+            kotlin.srcDir("../shared/src/jvmMain/kotlin")
+        }
         test {
             kotlin.srcDir("../shared/src/test/kotlin")
             resources.srcDir("../shared/src/test/resources")
@@ -216,9 +219,14 @@ dependencies {
     iconsFull(compose.materialIconsExtended)
     runtimeOnly(files(trimIcons))
     runtimeOnly("org.jetbrains.compose.material:material-icons-core:1.7.3")
-    implementation(libs.okhttp)
-    // Android has org.json built in; the desktop needs the real library.
-    implementation(libs.json.jvm)
+    // Dates, JSON, HTTP and files for the shared code, which also builds for a browser.
+    implementation(libs.kotlinx.datetime)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.ktor.client.core)
+    implementation(libs.okio)
+    implementation(libs.ktor.client.okhttp)
+    // The reference the app's own JSON objects are tested against.
+    testImplementation(libs.json.jvm)
     // The desktop's SQLite: the same database engine Android has built in.
     sqliteFull(libs.sqlite.jdbc)
     runtimeOnly(files(trimSqlite))
@@ -253,8 +261,9 @@ tasks.register<JavaExec>("helpDump") {
     args = (providers.gradleProperty("help").orNull ?: "build/help.json phone").split(" ")
 }
 
-// Remakes the installers' icons and the launch splash from the master SVGs.
-// Run after changing the icon, and commit desktop/icons/ and desktop/launch/.
+// Remakes the installers' icons, the launch splash and the web app's icons
+// from the master SVGs. Run after changing the icon, and commit desktop/icons/,
+// desktop/launch/ and web/src/wasmJsMain/resources/icons/.
 tasks.register<JavaExec>("icons") {
     classpath = sourceSets.test.get().runtimeClasspath
     mainClass = "com.riffbuddy.desktop.IconToolKt"
@@ -262,5 +271,6 @@ tasks.register<JavaExec>("icons") {
         file("../icon/variation-a-body.svg").path, file("icons").path,
         file("src/main/resources/icon/foreground.svg").path, file("launch/common").path,
         file("src/main/resources/icon/window").path,
+        file("../web/src/wasmJsMain/resources/icons").path,
     )
 }

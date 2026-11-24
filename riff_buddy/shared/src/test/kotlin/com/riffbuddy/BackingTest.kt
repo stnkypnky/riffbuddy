@@ -9,6 +9,7 @@ import com.riffbuddy.domain.backing.BackingStyle
 import com.riffbuddy.domain.backing.Chart
 import com.riffbuddy.domain.music.Scale
 import com.riffbuddy.tabs.TabParser
+import com.riffbuddy.tabs.TabScores
 import com.riffbuddy.domain.backing.Fretting
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -16,7 +17,7 @@ import org.junit.Test
 
 /**
  * The backing-track criteria, run through alphaTab on the JVM — and through its MIDI
- * generation too (TabParser.load), so "generates and plays" means the score
+ * generation too (TabScores.load), so "generates and plays" means the score
  * turned into sound, not merely that it parsed.
  */
 class BackingTest {
@@ -25,7 +26,7 @@ class BackingTest {
 
     private fun play(spec: BackingSpec): Pair<Score, com.riffbuddy.domain.backing.BackingScore> {
         val backing = BackingGenerator.generate(spec).getOrThrow()
-        return TabParser.load(backing.tex.toByteArray(), "backing.alphatex") to backing
+        return TabScores.load(backing.tex.toByteArray(), "backing.alphatex") to backing
     }
 
     private fun firstNotes(score: Score, track: Int): List<Int> = buildList {
@@ -122,7 +123,7 @@ class BackingTest {
     fun `pitch names mean what alphaTab thinks they mean`() {
         assertEquals("C4", BackingGenerator.pitch(60))
         assertEquals("A1", BackingGenerator.pitch(33))
-        val score = TabParser.load("\\tempo 90\n.\n\\track \"t\"\n\\staff {score}\n(A1).4 (C4).4 (C#2).2 |".toByteArray(), "x.alphatex")
+        val score = TabScores.load("\\tempo 90\n.\n\\track \"t\"\n\\staff {score}\n(A1).4 (C4).4 (C#2).2 |".toByteArray(), "x.alphatex")
         val beats = score.tracks[0].staves[0].bars[0].voices[0].beats
         assertEquals(listOf(33, 60, 37), (0 until beats.count()).map { beats[it].notes[0].realValue.toInt() })
     }

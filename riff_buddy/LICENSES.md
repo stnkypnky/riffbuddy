@@ -9,7 +9,7 @@ under. A hard rule from the spec: nothing bundled without an entry here.
 |---|---|---|
 | AndroidX (core, lifecycle, activity) | Apache-2.0 | Versions in `../../gradle/libs.versions.toml` |
 | Jetpack Compose (ui, graphics, material3, material-icons-extended) | Apache-2.0 | Via the Compose BOM |
-| OkHttp | Apache-2.0 | For the Gemini and Groq calls (M3) |
+| OkHttp | Apache-2.0 | For the Gemini and Groq calls (M3); since a design note it is Ktor's engine rather than called directly |
 | **alphaTab** 1.8.4 (`net.alphatab:alphaTab`) | MPL-2.0 | Tab rendering and playback. Used **unmodified**. MPL-2.0 is file-level copyleft: fine to use as a library in a closed app; any alphaTab *source file* changed would have to stay MPL and be published. Source: github.com/CoderLine/alphaTab. Confirmed from the POM. |
 | alphaSkia 3.4.135 (`alphaSkia`, `alphaSkia-android`) | BSD-3-Clause | alphaTab's drawing engine, pulled in transitively. Ships native `.so` files; only arm64-v8a and armeabi-v7a are kept. Confirmed from the POM. |
 | AndroidX appcompat | Apache-2.0 | Pulled in by alphaTab, not used directly |
@@ -29,15 +29,44 @@ Everything here is in the desktop build except where a line says otherwise.
 | alphaSkia 3.4.135 desktop natives (`alphaSkia-linux`, `-windows`, `-macos`) | BSD-3-Clause | Each installer keeps only its own OS's natives |
 | alphaTab 1.8.4, `classes.jar` from the AAR | MPL-2.0 | Same library, used unmodified on the JVM. Its worker-thread classes are called from a small Java file of ours (`AlphaTabWorkers.java`); nothing of alphaTab's is copied or changed |
 | sqlite-jdbc 3.53.4.0 (`org.xerial`) | Apache-2.0 | Ships in the desktop app, where it is the database |
-| org.json 20250517 | Public Domain | Ships in the desktop app; Android has it built in |
+| org.json 20250517 | Public Domain | Test only since the reference the app's own JSON objects are tested against |
 | OkHttp | Apache-2.0 | Same as Android |
 | java-keyring 1.0.4 (`com.github.javakeyring`) | BSD-3-Clause | API keys in the OS keychain. Backends: `secret-service` 1.8.1 (MIT) for Linux and `jkeychain` 1.1.0 (BSD-2-Clause) for macOS |
 | JNA 5.17.0 | Apache-2.0 / LGPL-2.1-or-later, dual | Used under Apache-2.0 |
 | javamp3 1.0.1 (`fr.delthas:javamp3`) | MIT | MP3 decoding for the looper. Confirmed from the POM, 2026-10-01 |
 | kotlinx-coroutines-swing 1.10.2 | Apache-2.0 | The UI thread's dispatcher on desktop |
-| **Roboto Condensed** (`desktop/src/main/resources/fonts/RobotoCondensed.ttf`) | SIL OFL 1.1 | The big numerals. From google/fonts; license text alongside as `RobotoCondensed-OFL.txt` |
 | **Liberation Sans** 2.1.5 (Regular, Bold, Italic, BoldItalic, `desktop/src/main/resources/fonts/`) | SIL OFL 1.1 | Text in rendered tabs on desktop. Copied from Debian's `fonts-liberation` 1:2.1.5-3; license text alongside as `LiberationSans-OFL.txt`, confirmed from the package's copyright file |
 | OpenJDK runtime (jlink-trimmed, inside each installer) | GPL-2.0 with Classpath Exception | The Classpath Exception is what allows bundling it with an app under any license. Bundled from Phase 5, with the installers |
+
+## Shared libraries, every edition
+
+Added when the shared code was made to build for a browser as well. Each
+ships in the APK, the desktop installers and the web build. Licenses
+confirmed from each POM, 2026-11-07.
+
+| Component | License | Notes |
+|---|---|---|
+| kotlinx-datetime 0.7.1 | Apache-2.0 | Dates and times in shared code |
+| kotlinx-serialization-json 1.11.0 | Apache-2.0 | The JSON parser under `json/`'s org.json-style objects |
+| Ktor client 3.6.0 (core; OkHttp engine on Android and desktop, JS engine on web) | Apache-2.0 | HTTP for the AI providers; replaced direct use of OkHttp, which now arrives through Ktor |
+| okio 3.18.2 | Apache-2.0 | Files, streams and SHA-256 in shared code |
+
+## Web edition
+
+What the web build serves. npm licenses confirmed from each package's
+`package.json`, 2026-11-07.
+
+| Component | License | Notes |
+|---|---|---|
+| Compose Multiplatform 1.12.1 for Web, with skiko's WebAssembly runtime | Apache-2.0 | The UI, drawn on a canvas |
+| okio-fakefilesystem 3.18.2 | Apache-2.0 | The in-memory file system the app works on, mirrored to the browser's storage |
+| **@sqlite.org/sqlite-wasm** 3.54.1-build1 | Apache-2.0 (the wrapper); SQLite itself is public domain | The database, in memory, saved to the browser's private storage |
+| **@coderline/alphatab** 1.8.4 (`alphaTab.js`) | MPL-2.0 | The same alphaTab version as the other editions, its own JavaScript build. Served unmodified beside the app |
+| Bravura (`alphatab/font/`) and the Sonivox SoundFont (`alphatab/soundfont/`) | SIL OFL 1.1; Apache-2.0 | The same files as in the alphaTab AAR (see Assets), served from alphaTab's npm package with their license texts beside them |
+| @js-joda/core 3.2.0 | BSD-3-Clause | Time zones for kotlinx-datetime in a browser, pulled in by it |
+| ws 8.20.1 | MIT | Pulled in by Ktor's JavaScript client for Node; not used in a browser |
+| **Inter** 4.001 (Regular, Medium, SemiBold; `src/main/assets/fonts/`) | SIL OFL 1.1 | The text face in every edition (a design note, closing a design note). Upstream static files by Rasmus Andersson, copied from Debian's `fonts-inter-zorin-os` package, whose copyright file lists them as OFL-1.1; license text alongside as `Inter-OFL.txt`, from google/fonts |
+| **Barlow Condensed** 1.4 (Medium, SemiBold, Bold; `src/main/assets/fonts/`) | SIL OFL 1.1 | Big numerals and headings in every edition. From google/fonts (`ofl/barlowcondensed`); license text alongside as `BarlowCondensed-OFL.txt`. Replaces Roboto Condensed |
 
 ## Assets
 
@@ -62,6 +91,4 @@ Everything here is in the desktop build except where a line says otherwise.
 These are named in the spec and will need an entry, and a license check, at the
 milestone that introduces them:
 
-- **Inter** and **Barlow Condensed** (A5, a design note) — both SIL OFL 1.1 as
-  published, to be confirmed against whatever files are actually downloaded.
 - **Click sounds** for the metronome (the spec, four or more) — M1.

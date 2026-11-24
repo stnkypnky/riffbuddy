@@ -1,0 +1,63 @@
+# Builds Riff Buddy's web edition and publishes it with GitHub Pages, as an
+# installable app that runs offline after the first visit.
+#
+# Runs when a version tag (v0.1.0, ...) is pushed, or by hand from the
+# Actions tab. Pages must be set to deploy from GitHub Actions, once, in the
+# repository's settings. The built site is searched for personal strings
+# before anything is published, and nothing is if one turns up.
+name: Web edition
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # The web edition alone: no Android SDK or signing key needed.
+      RIFFBUDDY_WEB_ONLY: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build the site
+        run: ./gradlew :web:wasmJsBrowserDistribution
+      - name: Leave out source maps and build notes
+        working-directory: riff_buddy/web/build/dist/wasmJs/productionExecutable
+        run: find . \( -name '*.map' -o -name '*.LICENSE.txt' \) -delete
+      - name: Search the site for personal strings
+        working-directory: riff_buddy/web/build/dist/wasmJs/productionExecutable
+        # Written in pieces, so this file passes the same search.
+        run: |
+          words="$(printf '%s|%s|%s' 'jo''ey' 'mach''ado' 'sc8''r91')"
+          if grep -r -a -l -i -E "$words" .; then
+            echo "::error::Personal strings in the built site (files above)"
+            exit 1
+          fi
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: riff_buddy/web/build/dist/wasmJs/productionExecutable
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

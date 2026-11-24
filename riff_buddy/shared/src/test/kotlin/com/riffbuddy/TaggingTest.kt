@@ -1,12 +1,12 @@
 package com.riffbuddy
 
+import com.riffbuddy.domain.EPOCH
 import com.riffbuddy.domain.Session
 import com.riffbuddy.domain.SessionItem
 import com.riffbuddy.domain.SessionTag
 import com.riffbuddy.domain.Tagging
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.time.Instant
 
 /** A session's minutes shared across what it was spent on. */
 class TaggingTest {
@@ -23,7 +23,7 @@ class TaggingTest {
     @Test
     fun `only tag items are read back as tags`() {
         val s = Session(
-            startedAt = Instant.EPOCH,
+            startedAt = EPOCH,
             items = listOf(
                 SessionItem(songId = 1, seconds = 600, notes = Tagging.MARK, partId = 9),
                 SessionItem(songId = 2, seconds = 0),                         // the Practice button

@@ -4,12 +4,12 @@ import com.riffbuddy.domain.Song
 import com.riffbuddy.domain.SongSort
 import com.riffbuddy.domain.SongStatus
 import com.riffbuddy.domain.Songbook
+import kotlin.time.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.Instant
 
 class SongbookTest {
 
@@ -24,7 +24,7 @@ class SongbookTest {
     ) = Song(
         id = id, title = title, artist = artist, status = status,
         selfDifficulty = difficulty, tags = tags,
-        createdAt = Instant.ofEpochSecond(added), updatedAt = Instant.ofEpochSecond(added),
+        createdAt = Instant.fromEpochSeconds(added), updatedAt = Instant.fromEpochSeconds(added),
     )
 
     private val library = listOf(
@@ -108,7 +108,7 @@ class SongbookTest {
 
     @Test
     fun `recent sort uses last practiced, falling back to last edited`() {
-        val practiced = mapOf(2L to Instant.ofEpochSecond(9_000))
+        val practiced = mapOf(2L to Instant.fromEpochSeconds(9_000))
         val order = Songbook.filterAndSort(library, sort = SongSort.RECENT, lastPracticed = practiced)
         assertEquals("Enter Sandman", order.first().title)
         // The rest keep their edited order, newest first.

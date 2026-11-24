@@ -9,7 +9,8 @@ import com.riffbuddy.domain.StepKind
 import com.riffbuddy.domain.StepOutcome
 import com.riffbuddy.domain.TodayItem
 import com.riffbuddy.domain.TodayPlan
-import java.time.Instant
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -19,7 +20,7 @@ import org.junit.Test
 class PlanTest {
 
     private val t0 = Instant.parse("2026-09-22T18:00:00Z")
-    private fun at(s: Long) = t0.plusSeconds(s)
+    private fun at(s: Long) = (t0 + (s).seconds)
 
     private val routine = Routine(
         name = "Test", steps = listOf(

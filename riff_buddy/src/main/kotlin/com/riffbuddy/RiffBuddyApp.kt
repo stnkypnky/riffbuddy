@@ -11,6 +11,8 @@ import com.riffbuddy.platform.AndroidAudioOutputs
 import com.riffbuddy.platform.AndroidDb
 import com.riffbuddy.platform.AndroidSecureStore
 import com.riffbuddy.platform.AppLog
+import com.riffbuddy.sync.nearbySync
+import okio.Path.Companion.toOkioPath
 
 /**
  * The Android app object: makes the Android pieces — the framework database,
@@ -35,13 +37,14 @@ class RiffBuddyApp : Application() {
             audioInputs = AndroidAudioInputs(this),
             keys = AndroidSecureStore(this),
             isOnline = connectivityCheck(this),
-            filesDir = filesDir,
-            cacheDir = cacheDir,
+            filesDir = filesDir.toOkioPath(),
+            cacheDir = cacheDir.toOkioPath(),
             appVersion = runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull() ?: "unknown",
-            deviceName = deviceName(),
-            holdNetwork = ::holdMulticast,
         )
     }
+
+    /** Nearby sync with the player's other devices. */
+    val sync by lazy { services.nearbySync(deviceName = deviceName(), holdNetwork = ::holdMulticast) }
 
     /**
      * The name set in the phone's About screen, such as "Sam's phone". The Fire

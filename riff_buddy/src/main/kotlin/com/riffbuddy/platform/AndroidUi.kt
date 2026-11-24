@@ -2,8 +2,9 @@ package com.riffbuddy.platform
 
 import android.content.Context
 import android.provider.Settings
-import androidx.compose.ui.text.font.DeviceFontFamilyName
+import android.content.res.AssetManager
 import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
 
 /**
@@ -13,10 +14,24 @@ import androidx.compose.ui.text.font.FontFamily
 object AndroidUi {
 
     /**
-     * The device's own condensed face for the big numerals — present on every
-     * Android build, no download, no license to track.
+     * The bundled faces, the same files the desktop and web editions use, so the
+     * app reads the same everywhere (a design note, closing a design note): Barlow Condensed
+     * for big numerals and titles, Inter for text. Loaded from assets, which
+     * every edition already shares.
      */
-    val condensedFont = FontFamily(Font(DeviceFontFamilyName("sans-serif-condensed")))
+    fun condensedFont(assets: AssetManager) = FontFamily(
+        Font("fonts/BarlowCondensed-Medium.ttf", assets, FontWeight.Normal),
+        Font("fonts/BarlowCondensed-Medium.ttf", assets, FontWeight.Medium),
+        Font("fonts/BarlowCondensed-SemiBold.ttf", assets, FontWeight.SemiBold),
+        Font("fonts/BarlowCondensed-Bold.ttf", assets, FontWeight.Bold),
+    )
+
+    fun textFont(assets: AssetManager) = FontFamily(
+        Font("fonts/Inter-Regular.ttf", assets, FontWeight.Normal),
+        Font("fonts/Inter-Medium.ttf", assets, FontWeight.Medium),
+        Font("fonts/Inter-SemiBold.ttf", assets, FontWeight.SemiBold),
+        Font("fonts/Inter-SemiBold.ttf", assets, FontWeight.Bold),
+    )
 
     /**
      * True when "Remove animations" is on: Android's accessibility setting

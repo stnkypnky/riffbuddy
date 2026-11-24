@@ -38,10 +38,10 @@ class DesktopAudioOutputs : AudioOutputs {
 
     override fun playClip(pcm: ShortArray, sampleRate: Int, kind: StreamKind) {
         thread(name = "clip", isDaemon = true) {
-            val out = open(sampleRate, kind) { it * 4 }
+            val out = open(sampleRate, kind) { it * 4 } as DesktopPcmOutput
             try {
                 out.play()
-                out.write(pcm, 0, pcm.size)
+                out.writeBlocking(pcm, 0, pcm.size)
                 out.stop()
             } finally {
                 out.release()
@@ -64,7 +64,10 @@ private class DesktopPcmOutput(private val line: SourceDataLine, override val sa
 
     override val bufferFrames: Int get() = line.bufferSize / 2
 
-    override fun write(pcm: ShortArray, offset: Int, frames: Int): Int {
+    override suspend fun write(pcm: ShortArray, offset: Int, frames: Int): Int = writeBlocking(pcm, offset, frames)
+
+    /** The write itself, which blocks this thread until the line has room. */
+    fun writeBlocking(pcm: ShortArray, offset: Int, frames: Int): Int {
         if (bytes.size < frames * 2) bytes = ByteArray(frames * 2)
         val v = volume
         for (i in 0 until frames) {
@@ -185,7 +188,7 @@ private class DesktopPcmInput(private val line: TargetDataLine) : PcmInput {
 
     override fun start() = line.start()
 
-    override fun read(buffer: FloatArray, offset: Int, frames: Int): Int {
+    override suspend fun read(buffer: FloatArray, offset: Int, frames: Int): Int {
         if (bytes.size < frames * 2) bytes = ByteArray(frames * 2)
         val n = line.read(bytes, 0, frames * 2) / 2
         for (i in 0 until n) {

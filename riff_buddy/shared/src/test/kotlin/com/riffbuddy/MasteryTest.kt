@@ -8,13 +8,14 @@ import com.riffbuddy.domain.SessionItem
 import com.riffbuddy.domain.Song
 import com.riffbuddy.domain.SongPart
 import com.riffbuddy.domain.SongStatus
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.Duration
-import java.time.Instant
 
 /** Stages, a song's progress from its parts, and the story told when it's mastered. */
 class MasteryTest {
@@ -55,14 +56,14 @@ class MasteryTest {
         val t0 = Instant.parse("2026-08-01T18:00:00Z")
         val song = Song(id = 7, title = "Floods", createdAt = t0)
         val sessions = listOf(
-            Session(id = 1, startedAt = t0.plusSeconds(86_400), endedAt = t0.plusSeconds(86_400 + 1800),
+            Session(id = 1, startedAt = (t0 + (86_400).seconds), endedAt = (t0 + (86_400 + 1800).seconds),
                 items = listOf(SessionItem(songId = 7, seconds = 900, bpmEnd = 70), SessionItem(songId = 8, seconds = 900))),
-            Session(id = 2, startedAt = t0.plusSeconds(10 * 86_400), endedAt = t0.plusSeconds(10 * 86_400 + 600),
+            Session(id = 2, startedAt = (t0 + (10 * 86_400).seconds), endedAt = (t0 + (10 * 86_400 + 600).seconds),
                 items = listOf(SessionItem(songId = 7, seconds = 600, bpmEnd = 92))),
-            Session(id = 3, startedAt = t0.plusSeconds(11 * 86_400), endedAt = t0.plusSeconds(11 * 86_400 + 600),
+            Session(id = 3, startedAt = (t0 + (11 * 86_400).seconds), endedAt = (t0 + (11 * 86_400 + 600).seconds),
                 items = listOf(SessionItem(songId = 8, seconds = 600))),
         )
-        val j = Journey.of(song, sessions, now = t0.plus(Duration.ofDays(21)))
+        val j = Journey.of(song, sessions, now = t0.plus(21.days))
         assertEquals(21, j.days)
         assertEquals(1500, j.seconds)
         assertEquals(2, j.sessions)

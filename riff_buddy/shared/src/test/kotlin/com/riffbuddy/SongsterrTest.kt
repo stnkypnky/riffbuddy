@@ -54,6 +54,8 @@ class SongsterrTest {
             "http://www.songsterr.com/a/wsa/x",          // not https
             "javascript:alert(1)",
             "intent://songsterr.com#Intent;scheme=https;end",
+            "https://songsterr.com@evil.example/a/wsa/x",  // the site is after the @
+            "https://evil.example\\@songsterr.com/a/wsa/x",
             "",
             "   ",
             "just some words",

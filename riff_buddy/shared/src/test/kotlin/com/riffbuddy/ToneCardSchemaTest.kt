@@ -5,7 +5,7 @@ import com.riffbuddy.domain.gear.EffectCategory
 import com.riffbuddy.domain.gear.EspLtdEc256
 import com.riffbuddy.domain.gear.MustangLt25
 import com.riffbuddy.domain.gear.Reach
-import org.json.JSONObject
+import com.riffbuddy.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

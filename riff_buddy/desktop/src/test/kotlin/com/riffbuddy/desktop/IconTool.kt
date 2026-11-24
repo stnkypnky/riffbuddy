@@ -16,7 +16,7 @@ import java.io.File
  * ICO for Windows and an ICNS for macOS. Not a test: run it when the icon
  * changes, and commit what it writes.
  *
- *   IconTool <master.svg> <out-dir> [<foreground.svg> <splash-dir> [<window-icon-dir>]]
+ *   IconTool <master.svg> <out-dir> [<foreground.svg> <splash-dir> [<window-icon-dir> [<web-icon-dir>]]]
  *
  * The master is a full square, as Android's adaptive icons are. Desktops
  * expect a rounded square with a little margin, the shape macOS draws its
@@ -44,6 +44,33 @@ fun main(args: Array<String>) {
         for (size in WINDOW_SIZES) File(window, "riffbuddy-$size.png").writeBytes(png.getValue(size))
         println("window icons written to $window")
     }
+    if (args.size >= 6) web(svg, File(args[2]).readBytes(), File(args[5]))
+}
+
+/**
+ * The web app's icons. Home screens get the same rounded square as a desktop;
+ * Android's launcher also takes a "maskable" icon, the full square master
+ * that it crops to its own shape, as it does the app's adaptive icon. The
+ * guitar alone, on nothing, is what the opening screen shows.
+ */
+private fun web(master: ByteArray, foreground: ByteArray, out: File) {
+    out.mkdirs()
+    File(out, "icon-192.png").writeBytes(render(master, 192))
+    File(out, "icon-512.png").writeBytes(render(master, 512))
+    File(out, "icon-maskable-512.png").writeBytes(full(master, 512))
+    File(out, "foreground.png").writeBytes(full(foreground, 440))
+    println("web icons written to $out")
+}
+
+/** The whole SVG on a square, unclipped. */
+private fun full(svg: ByteArray, size: Int): ByteArray {
+    val surface = Surface.makeRasterN32Premul(size, size)
+    val dom = SVGDOM(Data.makeFromBytes(svg))
+    dom.root!!.width = SVGLength(size.toFloat(), SVGLengthUnit.PX)
+    dom.root!!.height = SVGLength(size.toFloat(), SVGLengthUnit.PX)
+    dom.setContainerSize(size.toFloat(), size.toFloat())
+    dom.render(surface.canvas)
+    return surface.makeImageSnapshot().encodeToData(EncodedImageFormat.PNG)!!.bytes
 }
 
 /**

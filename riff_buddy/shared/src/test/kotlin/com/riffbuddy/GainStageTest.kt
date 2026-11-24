@@ -16,8 +16,11 @@ class GainStageTest {
     }
 
     @Test
-    fun `already loud enough gets no boost, never a cut`() {
-        assertEquals(0f, GainStage.suggest(GainStage.linear(-3f)), 0f)
+    fun `a take that arrives too hot is cut to land at minus 6`() {
+        assertEquals(-3f, GainStage.suggest(GainStage.linear(-3f)), 0.05f)
+        assertEquals(-6f, GainStage.suggest(1f), 0.05f)
+        // The cut has a floor too, like the boost.
+        assertEquals(GainStage.MIN_DB, GainStage.suggest(GainStage.linear(30f)), 0f)
     }
 
     /** Silence while "setting level" must not produce a runaway 60 dB. */

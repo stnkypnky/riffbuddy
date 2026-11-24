@@ -80,7 +80,7 @@ class GearJsonTest {
 class GearSuggestTest {
     @Test
     fun `a suggestion is read defensively`() {
-        val reply = org.json.JSONObject(
+        val reply = com.riffbuddy.json.JSONObject(
             """{"controls":[
                 {"name":"Gain","type":"knob","min":0,"max":10},
                 {"name":"gain","type":"knob"},
@@ -102,7 +102,7 @@ class GearSuggestTest {
     @Test
     fun `never more than the faceplate can draw`() {
         val many = (1..30).joinToString(",") { """{"name":"K$it","type":"knob"}""" }
-        val s = com.riffbuddy.ai.GearSuggest.parse(org.json.JSONObject("""{"controls":[$many],"confident":true}"""))
+        val s = com.riffbuddy.ai.GearSuggest.parse(com.riffbuddy.json.JSONObject("""{"controls":[$many],"confident":true}"""))
         assertEquals(16, s.controls.size)
     }
 }
@@ -115,7 +115,7 @@ class GearDraftTest {
 
     @Test
     fun `an amp draft carries everything a tone card uses`() {
-        val reply = org.json.JSONObject(
+        val reply = com.riffbuddy.json.JSONObject(
             """{"controls":[
                 {"name":"Gain","type":"knob","role":"tone","reach":"panel"},
                 {"name":"Master","type":"knob","role":"level","reach":"panel"},
@@ -140,12 +140,12 @@ class GearDraftTest {
 
     @Test
     fun `a guitar draft keeps what each pickup sounds like, and old replies still read`() {
-        val s = com.riffbuddy.ai.GearSuggest.parse(org.json.JSONObject(
+        val s = com.riffbuddy.ai.GearSuggest.parse(com.riffbuddy.json.JSONObject(
             """{"controls":[],"pickups":[{"position":"Bridge","description":"humbucker, bright"},{"position":"Neck"}],"confident":true}"""
         ))
         assertEquals(listOf("Bridge", "Neck"), s.pickups.map { it.label })
         assertEquals("humbucker, bright", s.pickups[0].description)
-        val old = com.riffbuddy.ai.GearSuggest.parse(org.json.JSONObject(
+        val old = com.riffbuddy.ai.GearSuggest.parse(com.riffbuddy.json.JSONObject(
             """{"controls":[],"pickups":["Bridge","Middle"],"confident":true}"""
         ))
         assertEquals(listOf("Bridge", "Middle"), old.pickups.map { it.label })

@@ -1,15 +1,16 @@
 package com.riffbuddy
 
 import com.riffbuddy.data.BackupFormat
-import org.json.JSONArray
-import org.json.JSONObject
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Instant
+import com.riffbuddy.json.JSONArray
+import com.riffbuddy.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 
 class BackupFormatTest {
 
@@ -21,7 +22,7 @@ class BackupFormatTest {
         .put("format", format)
         .put("schema_version", version)
         .put("app_version", "0.1.0")
-        .put("created_at", Instant.now().toEpochMilli())
+        .put("created_at", Clock.System.now().toEpochMilliseconds())
         .apply {
             if (withTables) put(
                 "tables",
@@ -112,9 +113,9 @@ class BackupFormatTest {
     /** A gentle nudge after thirty days, and never before. */
     @Test
     fun `the reminder waits thirty days`() {
-        val now = Instant.now()
-        assertFalse(BackupFormat.needsReminder(now.minus(29, ChronoUnit.DAYS), now))
-        assertTrue(BackupFormat.needsReminder(now.minus(30, ChronoUnit.DAYS), now))
+        val now = Clock.System.now()
+        assertFalse(BackupFormat.needsReminder(now - 29.days, now))
+        assertTrue(BackupFormat.needsReminder(now - 30.days, now))
         // Never backed up at all is not a nag — there may be nothing worth saving.
         assertFalse(BackupFormat.needsReminder(null, now))
     }
@@ -161,7 +162,7 @@ class BackupFormatTest {
 
     @Test
     fun `a version 1 backup still restores after the format moved to 2`() {
-        val old = BackupFormat.manifest("0.1.0").put("schema_version", 1).put("tables", org.json.JSONObject())
+        val old = BackupFormat.manifest("0.1.0").put("schema_version", 1).put("tables", com.riffbuddy.json.JSONObject())
         assertEquals(null, BackupFormat.validate(old))
     }
 }

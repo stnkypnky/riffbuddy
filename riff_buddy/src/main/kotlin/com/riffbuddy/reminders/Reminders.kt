@@ -1,32 +1,30 @@
 package com.riffbuddy.reminders
 
-import android.app.AlarmManager
 import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.core.content.ContextCompat
+import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.riffbuddy.MainActivity
 import com.riffbuddy.R
 import com.riffbuddy.RiffBuddyApp
 import com.riffbuddy.data.Repo
 import com.riffbuddy.domain.ReminderSchedule
 import com.riffbuddy.domain.ReminderSettings
+import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
-import java.time.ZonedDateTime
 
 /**
  * The reminders, on AlarmManager.
@@ -58,15 +56,15 @@ object Reminders {
     )
 
     /** Schedules the next reminder, or cancels it when there is none. Returns when it will fire. */
-    fun schedule(context: Context, settings: ReminderSettings): ZonedDateTime? {
+    fun schedule(context: Context, settings: ReminderSettings): Instant? {
         val alarms = context.getSystemService(AlarmManager::class.java) ?: return null
-        val next = ReminderSchedule.nextFire(settings, ZonedDateTime.now(ZoneId.systemDefault()))
+        val next = ReminderSchedule.nextFire(settings, Clock.System.now(), ReminderSchedule.zone())
         if (next == null) {
             alarms.cancel(pending(context))
             Log.i(TAG, "reminders off: alarm canceled")
             return null
         }
-        alarms.setWindow(AlarmManager.RTC_WAKEUP, next.toInstant().toEpochMilli(), 10 * 60_000L, pending(context))
+        alarms.setWindow(AlarmManager.RTC_WAKEUP, next.toEpochMilliseconds(), 10 * 60_000L, pending(context))
         Log.i(TAG, "next reminder at $next")
         return next
     }

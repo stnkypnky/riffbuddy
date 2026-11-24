@@ -7,6 +7,9 @@ import com.riffbuddy.data.SecureStore
 import com.riffbuddy.domain.Song
 import com.riffbuddy.domain.TakeSource
 import com.riffbuddy.sync.SyncService
+import java.io.File
+import java.net.ServerSocket
+import java.nio.file.Files
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -15,14 +18,14 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import okio.Path.Companion.toOkioPath
+import okio.buffer
+import okio.sink
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.net.ServerSocket
-import java.nio.file.Files
 
 /**
  * Two copies of the app, each with its own database and files, paired and
@@ -51,7 +54,7 @@ class NearbySyncTest {
         val keys = MemoryKeys()
         val app = AppServices(
             JdbcDb(File(dir, "riffbuddy.db")), DesktopAudioOutputs(), DesktopAudioInputs(), keys,
-            OnlineCheck { true }, dir, File(dir, "cache"), "test",
+            OnlineCheck { true }, dir.toOkioPath(), File(dir, "cache").toOkioPath(), "test",
         )
         val port = ServerSocket(0).use { it.localPort }
         val sync = SyncService(app.backup, keys, dir, File(dir, "cache"), defaultName = name, port = port)
@@ -89,8 +92,8 @@ class NearbySyncTest {
         // Both know a song before pairing, as after a backup copied across.
         val shared = phone.song("Floods")
         val backupFile = File(root, "copy.zip")
-        backupFile.outputStream().use { phone.app.backup.exportTo(it) }
-        tablet.app.backup.restore(tablet.app.backup.inspectFile(backupFile).getOrThrow(), com.riffbuddy.data.BackupFormat.Mode.MERGE).getOrThrow()
+        phone.app.backup.exportTo(backupFile.sink().buffer())
+        tablet.app.backup.restore(tablet.app.backup.inspectFile(backupFile.toOkioPath()).getOrThrow(), com.riffbuddy.data.BackupFormat.Mode.MERGE).getOrThrow()
 
         val agreeing = agreeWhenAsked(phone, tablet)
         withTimeout(15_000) { phone.sync.pair(tablet.address) }
@@ -105,7 +108,7 @@ class NearbySyncTest {
         tablet.song("Master of Puppets")
         phone.app.songs.delete(shared)
         val take = tablet.app.recordings.begin("Riff", 48_000, null, null, 0, TakeSource.NONE)
-        tablet.app.recordings.fileFor(take).writeBytes(ByteArray(4096) { it.toByte() })
+        tablet.app.recordings.fileFor(take).toFile().writeBytes(ByteArray(4096) { it.toByte() })
 
         withTimeout(15_000) { phone.sync.sync(phone.sync.devices.single().copy(address = tablet.address)) }
         assertNull(phone.sync.problem, phone.sync.problem)
@@ -114,7 +117,7 @@ class NearbySyncTest {
         assertEquals(expected, phone.titles())
         assertEquals(expected, tablet.titles())
         val arrived = phone.app.recordings.all().single()
-        assertEquals(4096L, phone.app.recordings.fileFor(arrived).length())
+        assertEquals(4096L, phone.app.recordings.fileFor(arrived).toFile().length())
         assertTrue(tablet.sync.notice.orEmpty(), tablet.sync.notice.orEmpty().startsWith("Synced with Phone"))
         assertTrue(phone.sync.dataVersion > 0 && tablet.sync.dataVersion > 0)
 
@@ -137,7 +140,7 @@ class NearbySyncTest {
 
         phone.song("Little Wing")
         val doomed = phone.app.recordings.begin("Old take", 48_000, null, null, 0, TakeSource.NONE)
-        phone.app.recordings.fileFor(doomed).writeBytes(ByteArray(100))
+        phone.app.recordings.fileFor(doomed).toFile().writeBytes(ByteArray(100))
         tablet.song("Master of Puppets")
         withTimeout(15_000) { phone.sync.sync(phone.sync.devices.single().copy(address = tablet.address)) }
 
@@ -150,7 +153,7 @@ class NearbySyncTest {
         phone.sync.undoLastSync()
         assertNull(phone.sync.problem, phone.sync.problem)
         val back = phone.app.recordings.all().single()
-        assertEquals("the take's file was kept for the undo", 100L, phone.app.recordings.fileFor(back).length())
+        assertEquals("the take's file was kept for the undo", 100L, phone.app.recordings.fileFor(back).toFile().length())
         assertEquals(listOf("Little Wing", "Master of Puppets"), phone.titles())
         assertNull(phone.sync.undo)
     }

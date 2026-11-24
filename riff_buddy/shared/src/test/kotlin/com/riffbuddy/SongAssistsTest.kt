@@ -2,7 +2,7 @@ package com.riffbuddy
 
 import com.riffbuddy.ai.SongAssists
 import com.riffbuddy.domain.Song
-import org.json.JSONObject
+import com.riffbuddy.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

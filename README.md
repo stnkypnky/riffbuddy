@@ -1,12 +1,17 @@
 # Riff Buddy
 
-**A guitar practice companion for Android, Windows, macOS and Linux.** It has a metronome, a tuner and
-a songbook, shows scales and chords on the neck (and plays them for you),
-plays tabs, loops and slows songs down, records you, builds backing tracks,
-and has an AI coach that tells you where to set the knobs on *your* amp for
-a song.
+**A guitar practice companion that runs in your browser,** on a phone,
+tablet or computer. It has a metronome, a tuner and a songbook, shows scales
+and chords on the neck (and plays them for you), plays tabs, loops and slows
+songs down, records you, builds backing tracks, and has an AI coach that
+tells you where to set the knobs on *your* amp for a song.
 
 It's free, works offline, and has no account, ads or tracking.
+
+## ▶ [Open Riff Buddy](https://stnkypnky.github.io/riffbuddy/)
+
+Nothing to install: open the link and play. The first visit downloads the
+app; after that it opens and runs with no internet.
 
 > 📘 **New here? Read the [illustrated guide (PDF)](docs/Riff-Buddy-Guide.pdf).**
 > It walks through setup and every screen with pictures.
@@ -15,13 +20,63 @@ It's free, works offline, and has no account, ads or tracking.
 
 ## Get started in 3 steps
 
-### 1. Install it (about 5 minutes)
+### 1. Open it (and keep it, if you like)
+
+Open **[Riff Buddy](https://stnkypnky.github.io/riffbuddy/)** in a current browser: Chrome, Edge,
+Firefox or Safari. Allow the microphone when the tuner or recorder asks.
+
+To give it its own icon and window, install it from the browser. It's still
+the web app, just one tap away:
+- **iPhone or iPad** (iOS 18.2 or newer): in Safari, tap **Share**, then
+  **Add to Home Screen**, and open it from there. Installed, Safari keeps
+  your practice; as a plain web page it may clear it after weeks unvisited.
+- **Android:** Chrome › **⋮** › **Install app**.
+- **Computer:** the install icon at the right of Chrome's or Edge's address bar.
+
+What the browser can't do, and what it does instead:
+- It can't sync with your other devices itself: **Export** a backup and
+  **Import** it on the other device.
+- Reminders come only while it's open, so **Add to my calendar** lets your
+  calendar remind you.
+- Takes are shared as WAV.
+
+Want a native app instead? See [Install an app (optional)](#install-an-app-optional) below.
+
+### 2. Set it up (about 3 minutes, all skippable)
+
+The first launch walks you through three short steps:
+
+1. **About you:** how long you've played and what you like. The coach
+   pitches its answers at your level.
+2. **The coach:** an optional free AI key (see below).
+3. **Your gear:** tap **+ Add** under Guitars, then under Amps. Type the make and
+   model and tap **Fill in with the coach**, and it drafts the knobs, amp
+   models and effects for you to check. The first guitar and amp you add
+   become your rig.
+
+You can skip anything and come back later in **Me › Settings**.
+
+### 3. Play
+
+Start with **Tools**: the metronome, the tuner and **Theory**. In Theory,
+pick a scale, step through its positions with ◀ ▶, and tap **Play** to hear
+it. Every screen has a **?** in the corner with answers for that screen.
+
+---
+
+## Install an app (optional)
+
+The web app is the same app as these. Install one if you'd rather have it
+outside the browser, or want nearby sync between your own devices.
+
+### Android phone or tablet (about 5 minutes)
 
 Riff Buddy isn't in the Play Store yet, so you install the app file yourself.
 It's safe, and you only do this once.
 
-1. On your phone or tablet, open this page and go to **Releases** (on the
-   right, or under the file list on a phone).
+1. On your phone or tablet, open this page (the repository, not the web
+   app) and go to **Releases** (on the right, or under the file list on a
+   phone).
 2. Under the newest release, tap **`riff_buddy-release.apk`** to download it.
 3. Open the download. Android says it can't install apps from this source:
    tap **Settings**, turn on **Allow from this source**, then go back.
@@ -30,7 +85,7 @@ It's safe, and you only do this once.
 
 Needs Android 8.0 or newer (almost any phone or tablet from 2018 on).
 
-#### On a computer
+### Windows, macOS or Linux
 
 Under the newest release, download the file for your computer. The installers
 aren't signed (signing costs money every year), so each system asks once
@@ -77,26 +132,6 @@ the Riff Buddy window.) On a computer:
 - The looper opens WAV, AIFF and MP3, but not M4A.
 - Reminders show only while the app is open.
 
-### 2. Set it up (about 3 minutes, all skippable)
-
-The first launch walks you through three short steps:
-
-1. **About you:** how long you've played and what you like. The coach
-   pitches its answers at your level.
-2. **The coach:** an optional free AI key (see below).
-3. **Your gear:** tap **+ Add** under Guitars, then under Amps. Type the make and
-   model and tap **Fill in with the coach**, and it drafts the knobs, amp
-   models and effects for you to check. The first guitar and amp you add
-   become your rig.
-
-You can skip anything and come back later in **Me › Settings**.
-
-### 3. Play
-
-Start with **Tools**: the metronome, the tuner and **Theory**. In Theory,
-pick a scale, step through its positions with ◀ ▶, and tap **Play** to hear
-it. Every screen has a **?** in the corner with answers for that screen.
-
 ---
 
 ## The AI coach (free, optional)
@@ -123,6 +158,24 @@ in, create a key, copy it, come back, paste it and tap **Save key**, then
 With two keys, the coach switches to the other when one is busy. If a
 provider suggests a smarter model, tap **Use it**.
 
+**Paid providers, if you want them.** If you already pay for **Claude**
+(Anthropic), **OpenAI** or **DeepSeek**, you can add that key too, under
+**Paid providers** in the same settings. They bill your own account with
+them, and they're never used unless you choose them: tap
+**Ready · answering with …** (or **Change who answers…** in the coach's
+options) to pick a provider and model. **Use paid providers as a fallback**
+is off unless you turn it on.
+
+---
+
+## Make it yours
+
+**Me › Settings › Appearance** has ten color schemes named after guitar
+finishes, seven dark (Sunburst, Cherry, Rosewood, Ebony, Mahogany, Surf Green,
+Lake Placid Blue) and three light (Maple, Olympic White, Butterscotch). Every
+speed and setting can be typed as well as picked: tap the number.
+
+
 ---
 
 ## Your data and privacy
@@ -134,7 +187,8 @@ provider suggests a smarter model, tap **Use it**.
   part, your tuning and your gear. Never your recordings, tab files, notes
   or practice history. **What I sent**, under any answer, shows the exact
   text. **Me › Settings › What leaves this device** explains it.
-- **Keys are locked** in Android's secure Keystore. They're never in a
+- **Keys are locked:** in Android's Keystore, the computer's keychain, or
+  in the browser by a key that can't be copied out. They're never in a
   backup or the logs.
 - **Back up** with **Me › Settings › Export**. It saves one `.riffbuddy`
   file with your songs, practice log, gear, tone cards, lessons, routines,
@@ -188,6 +242,19 @@ export RIFFBUDDY_DESKTOP_ONLY=1              # skip the Android app
 
 Pushing a `v*` tag builds all three installers on GitHub Actions
 (`.github/workflows/desktop.yml`) into a draft release.
+
+The web edition is in `riff_buddy/web/`: the same shared code compiled to
+WebAssembly with Compose for Web, also needing only JDK 21:
+
+```sh
+export RIFFBUDDY_WEB_ONLY=1                  # skip the Android app
+./gradlew :web:wasmJsBrowserDistribution     # the site → riff_buddy/web/build/dist/wasmJs/productionExecutable/
+# Serve that folder on localhost (for example python3 -m http.server) and open it.
+```
+
+A `v*` tag also publishes the web edition to GitHub Pages
+(`.github/workflows/web.yml`), once Pages is set to deploy from GitHub
+Actions in the repository's settings.
 
 A signed release build needs a `keystore.properties` in the project root
 (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`). It and the

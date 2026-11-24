@@ -4,7 +4,7 @@ import com.riffbuddy.ai.ModelCatalog
 import com.riffbuddy.ai.ProviderConfig
 import com.riffbuddy.ai.ProviderId
 import com.riffbuddy.ai.SchemaSupport
-import org.json.JSONObject
+import com.riffbuddy.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -25,7 +25,10 @@ class ProvidersTest {
     fun `every provider says where its free key is and what to suggest`() {
         ProviderId.entries.forEach { p ->
             assertTrue(p.keyUrl, p.keyUrl.startsWith("https://"))
-            assertTrue(p.keySteps.isNotBlank() && p.freeTier.contains("no card"))
+            assertTrue(p.keySteps.isNotBlank())
+            // A paid provider says so first, in words, wherever its terms appear.
+            if (p.paid) assertTrue(p.freeTier, p.freeTier.startsWith("Paid:"))
+            else assertTrue(p.freeTier, p.freeTier.contains("no card"))
             assertEquals(p.recommendedModel, ProviderConfig.defaultFor(p).model)
             assertEquals(p, ProviderConfig.defaultFor(p).id)
         }

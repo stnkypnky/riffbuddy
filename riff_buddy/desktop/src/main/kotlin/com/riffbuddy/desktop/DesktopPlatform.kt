@@ -22,6 +22,7 @@ import com.riffbuddy.audio.StreamKind
 import com.riffbuddy.audio.Waveform
 import com.riffbuddy.data.BackupFormat
 import com.riffbuddy.data.ReminderStore
+import com.riffbuddy.desktop.tabs.DesktopScoreView
 import com.riffbuddy.domain.ReminderSchedule
 import com.riffbuddy.domain.ReminderSettings
 import com.riffbuddy.platform.AppLog
@@ -29,12 +30,30 @@ import com.riffbuddy.platform.CountdownBeeper
 import com.riffbuddy.platform.Permission
 import com.riffbuddy.platform.PickedFile
 import com.riffbuddy.platform.Platform
-import com.riffbuddy.tabs.PlaybackMemory
 import com.riffbuddy.tabs.AlphaTabPlayer
+import com.riffbuddy.tabs.PlaybackMemory
 import com.riffbuddy.tabs.TabPlayer
-import com.riffbuddy.desktop.tabs.DesktopScoreView
 import com.riffbuddy.tabs.TabSource
 import fr.delthas.javamp3.Sound
+import java.awt.Desktop
+import java.awt.FileDialog
+import java.awt.SystemTray
+import java.awt.TrayIcon
+import java.awt.datatransfer.DataFlavor
+import java.awt.dnd.DnDConstants
+import java.awt.dnd.DropTarget
+import java.awt.dnd.DropTargetDropEvent
+import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
+import java.net.URI
+import javax.sound.sampled.AudioFormat
+import javax.sound.sampled.AudioSystem
+import kotlin.math.PI
+import kotlin.math.sin
+import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Instant
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -44,24 +63,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.awt.Desktop
-import java.awt.datatransfer.DataFlavor
-import java.awt.dnd.DnDConstants
-import java.awt.dnd.DropTarget
-import java.awt.dnd.DropTargetDropEvent
-import java.awt.FileDialog
-import java.awt.SystemTray
-import java.awt.TrayIcon
-import java.io.File
-import java.io.InputStream
-import java.io.OutputStream
-import java.net.URI
-import java.time.Duration
-import java.time.ZonedDateTime
-import javax.sound.sampled.AudioFormat
-import javax.sound.sampled.AudioSystem
-import kotlin.math.PI
-import kotlin.math.sin
+import okio.BufferedSink
+import okio.Path
+import okio.Path.Companion.toOkioPath
+import okio.Source
+import okio.buffer
+import okio.sink
+import okio.source
 
 /**
  * The shared [Platform] on a desktop computer. Where a phone idea has no
@@ -71,9 +79,12 @@ import kotlin.math.sin
  */
 class DesktopPlatform(
     private val services: AppServices,
-    override val filesDir: File,
-    override val cacheDir: File,
+    private val dataFolder: File,
+    private val cacheFolder: File,
 ) : Platform {
+
+    override val filesDir: Path = dataFolder.toOkioPath()
+    override val cacheDir: Path = cacheFolder.toOkioPath()
 
     /** Set once the window exists; file dialogs and minimizing need it. */
     var window: ComposeWindow? = null
@@ -110,7 +121,7 @@ class DesktopPlatform(
     }
 
     private fun repack(folder: File): File {
-        val out = File(cacheDir, "${folder.name}.${BackupFormat.FILE_EXTENSION}")
+        val out = File(cacheFolder, "${folder.name}.${BackupFormat.FILE_EXTENSION}")
         java.util.zip.ZipOutputStream(out.outputStream().buffered()).use { zip ->
             folder.walkTopDown().filter { it.isFile }.forEach { f ->
                 zip.putNextEntry(java.util.zip.ZipEntry(f.relativeTo(folder).invariantSeparatorsPath))
@@ -148,7 +159,7 @@ class DesktopPlatform(
      * one. Everything is read into memory, mixed to mono and kept at the file's
      * own rate — what the looper needs to reach any moment instantly.
      */
-    override fun decodeAudio(ref: String, onProgress: (Float) -> Unit, canceled: () -> Boolean): DecodedAudio {
+    override suspend fun decodeAudio(ref: String, onProgress: (Float) -> Unit, canceled: () -> Boolean): DecodedAudio {
         val file = File(ref)
         if (!file.isFile) throw AudioFileException("That file could not be opened. It may have been moved or deleted.")
         // Progress follows the file read, not the samples made: a compressed
@@ -216,7 +227,7 @@ class DesktopPlatform(
     /** No AAC encoder ships with Java; takes leave as WAV, which plays everywhere. */
     override val canEncodeM4a: Boolean get() = false
 
-    override fun encodeM4a(pcm: Pcm, out: File) = error("M4A export is not available on this computer.")
+    override fun encodeM4a(pcm: Pcm, out: Path) = error("M4A export is not available on this computer.")
 
     /** Two short sine beeps, the last one higher — the same shape Android's tone generator plays. */
     override fun countdownBeeper(): CountdownBeeper = object : CountdownBeeper {
@@ -239,8 +250,8 @@ class DesktopPlatform(
     // ---- files -----------------------------------------------------------------
 
     /** Bundled files — the sample recordings and tabs — travel inside the app as resources. */
-    override fun openAsset(path: String): InputStream =
-        javaClass.getResourceAsStream("/$path") ?: error("$path is missing from the app.")
+    override fun openAsset(path: String): Source =
+        (javaClass.getResourceAsStream("/$path") ?: error("$path is missing from the app.")).source()
 
     @Composable
     override fun rememberOpenFile(mimeTypes: List<String>, keepAccess: Boolean, onPicked: (PickedFile?) -> Unit): () -> Unit {
@@ -253,33 +264,33 @@ class DesktopPlatform(
         }
     }
 
-    override fun openInput(ref: String): InputStream = File(ref).inputStream()
+    override fun openInput(ref: String): Source = File(ref).source()
 
     /** A path stays readable as long as the file is there; there is no grant to give back. */
     override fun releaseAccess(ref: String) {}
 
-    override fun refOf(file: File): String = file.absolutePath
+    override fun refOf(file: Path): String = file.toFile().absolutePath
 
     @Composable
-    override fun rememberCreateFile(mimeType: String, write: suspend (OutputStream) -> Unit): (String) -> Unit {
+    override fun rememberCreateFile(mimeType: String, write: suspend (BufferedSink) -> Unit): (String) -> Unit {
         val scope = rememberCoroutineScope()
         val latest by rememberUpdatedState(write)
         return { name ->
             chooseFile(FileDialog.SAVE, name, emptyList())?.let { target ->
-                scope.launch { withContext(Dispatchers.IO) { target.outputStream().use { latest(it) } } }
+                scope.launch { withContext(Dispatchers.IO) { target.sink().buffer().use { latest(it) } } }
             }
         }
     }
 
     @Composable
-    override fun rememberSaveCopy(extension: String, mimeType: String, onResult: (String) -> Unit): (File) -> Unit {
+    override fun rememberSaveCopy(extension: String, mimeType: String, onResult: (String) -> Unit): (Path) -> Unit {
         val scope = rememberCoroutineScope()
         val report by rememberUpdatedState(onResult)
         return { source ->
             chooseFile(FileDialog.SAVE, source.name, emptyList())?.let { target ->
                 scope.launch {
                     report(
-                        runCatching { withContext(Dispatchers.IO) { source.copyTo(target, overwrite = true) } }
+                        runCatching { withContext(Dispatchers.IO) { source.toFile().copyTo(target, overwrite = true) } }
                             .fold({ "Saved ${target.name}." }, { "Couldn't save: ${it.message}" })
                     )
                 }
@@ -291,7 +302,8 @@ class DesktopPlatform(
      * A desktop has no share sheet. The file is shown in its folder instead,
      * from where it can be dragged into an email or a chat.
      */
-    override fun shareFile(file: File, mimeType: String, title: String) {
+    override fun shareFile(path: Path, mimeType: String, title: String) {
+        val file = path.toFile()
         val desktop = Desktop.getDesktop()
         when {
             desktop.isSupported(Desktop.Action.BROWSE_FILE_DIR) -> desktop.browseFileDirectory(file)
@@ -338,11 +350,11 @@ class DesktopPlatform(
      * notice from its tray icon. Closed, the app reminds no one — said plainly
      * on the reminder settings.
      */
-    override fun scheduleReminder(settings: ReminderSettings): ZonedDateTime? {
+    override fun scheduleReminder(settings: ReminderSettings): Instant? {
         reminderJob?.cancel()
-        val next = ReminderSchedule.nextFire(settings, ZonedDateTime.now(ReminderSchedule.zone())) ?: return null
+        val next = ReminderSchedule.nextFire(settings, Clock.System.now(), ReminderSchedule.zone()) ?: return null
         reminderJob = scope.launch {
-            delay(Duration.between(ZonedDateTime.now(next.zone), next).toMillis().coerceAtLeast(0))
+            delay((next - Clock.System.now()).coerceAtLeast(Duration.ZERO))
             ReminderStore.dueNotices(services.repo, services.sessions).forEach { notify(it.title, it.text) }
             scheduleReminder(ReminderStore.load(services.repo))
         }
@@ -420,7 +432,7 @@ class DesktopPlatform(
     @Composable
     override fun appIcon(): Painter {
         val density = LocalDensity.current
-        return remember(density) { loadSvgPainter(openAsset("icon/foreground.svg"), density) }
+        return remember(density) { loadSvgPainter(openAsset("icon/foreground.svg").buffer().inputStream(), density) }
     }
 
     private companion object {

@@ -213,7 +213,7 @@ class SyncTest {
         val other = java.net.DatagramSocket(0, InetAddress.getLoopbackAddress()).apply { soTimeout = 3000 }
         try {
             fun say(peer: SyncPeer) {
-                val bytes = org.json.JSONObject().put("app", SyncProtocol.APP).put("v", 1)
+                val bytes = com.riffbuddy.json.JSONObject().put("app", SyncProtocol.APP).put("v", 1)
                     .put("id", peer.id).put("name", peer.name).toString().toByteArray()
                 other.send(java.net.DatagramPacket(bytes, bytes.size, InetAddress.getLoopbackAddress(), port))
             }
@@ -223,7 +223,7 @@ class SyncTest {
             assertEquals(listOf(tablet), discovery.nearby.value.map { it.peer })
             val answer = java.net.DatagramPacket(ByteArray(1024), 1024)
             other.receive(answer)
-            assertEquals(phone.id, org.json.JSONObject(String(answer.data, 0, answer.length)).getString("id"))
+            assertEquals(phone.id, com.riffbuddy.json.JSONObject(String(answer.data, 0, answer.length)).getString("id"))
         } finally {
             discovery.stop()
             scope.coroutineContext[kotlinx.coroutines.Job]?.cancel()

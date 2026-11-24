@@ -31,10 +31,10 @@ android {
         // (Fire OS 7 = API 28), which are the two test devices (the spec).
         minSdk = 26
         targetSdk = 37
-        versionCode = 7
+        versionCode = 8
         // 1.0.0 with the desktop edition. Also the desktop installers' version,
         // and macOS refuses one that starts with 0.
-        versionName = "1.0.5"
+        versionName = "1.1.0"
 
         // alphaTab brings Skia as native code, about 7 MB per ABI. Only ARM is
         // kept: the S22 is arm64 and the Fire HD 10 is armeabi-v7a *only* — a
@@ -70,11 +70,16 @@ android {
         }
     }
 
-    // Code shared with the desktop edition lives in shared/ and is
-    // compiled into this app as if it were in src/. The desktop module
-    // compiles the same folder, which is what keeps Android imports out of it.
+    // Code shared with the desktop edition and the web edition
+    // lives in shared/ and is compiled into this app as if it were in
+    // src/: commonMain, which the web build also compiles, and jvmMain, which
+    // only the two JVM editions do. The desktop module compiles both folders,
+    // which is what keeps Android imports out of them.
     sourceSets {
-        getByName("main") { kotlin.srcDir("shared/src/main/kotlin") }
+        getByName("main") {
+            kotlin.srcDir("shared/src/commonMain/kotlin")
+            kotlin.srcDir("shared/src/jvmMain/kotlin")
+        }
         getByName("test") {
             kotlin.srcDir("shared/src/test/kotlin")
             resources.srcDir("shared/src/test/resources")
@@ -123,9 +128,14 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
 
-    // The AI provider layer is ported from an earlier app, which is
-    // built on OkHttp. Present from M0 so the port has nothing to add later.
-    implementation(libs.okhttp)
+    // Dates, JSON, HTTP and files in shared code, which the web edition compiles too
+    //. The AI provider layer talks HTTP through Ktor, which
+    // runs on OkHttp here, as the layer did directly before.
+    implementation(libs.kotlinx.datetime)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.ktor.client.core)
+    implementation(libs.okio)
+    implementation(libs.ktor.client.okhttp)
 
     // The tab library and player. A design note.
     implementation(libs.alphatab)
@@ -133,8 +143,8 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
 
     testImplementation(libs.junit)
-    // Android stubs org.json in unit tests; the real implementation on the test
-    // classpath is what lets tone-card JSON validation be tested at all.
+    // The real org.json, the reference the app's own JSON objects are
+    // tested against; Android's built-in copy is only stubs in unit tests.
     testImplementation(libs.json.jvm)
     // The upgrade fixture runs the migrations for real (MigrationTest).
     testImplementation(libs.sqlite.jdbc)

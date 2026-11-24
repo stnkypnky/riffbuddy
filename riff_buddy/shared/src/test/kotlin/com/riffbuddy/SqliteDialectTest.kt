@@ -61,16 +61,16 @@ class SqliteDialectTest {
         .replace(Regex("""//[^\n]*"""), " ")
 
     /**
-     * Both source roots: the Android app's own and the shared one. Tests run
+     * Every source root: the Android app's own and the shared ones. Tests run
      * from the app module or the desktop module, so this walks up until it
      * finds the folder that holds `shared/`.
      */
     private fun mainSources(): List<File> {
         val module = generateSequence(File("").absoluteFile) { it.parentFile }
             .flatMap { sequenceOf(it, File(it, "apps/riff_buddy")) }
-            .firstOrNull { File(it, "shared/src/main/kotlin").isDirectory }
+            .firstOrNull { File(it, "shared/src/commonMain/kotlin").isDirectory }
             ?: return emptyList()
-        return listOf("src/main/kotlin", "shared/src/main/kotlin")
+        return listOf("src/main/kotlin", "shared/src/commonMain/kotlin", "shared/src/jvmMain/kotlin")
             .map { File(module, it) }
             .filter { it.isDirectory }
             .flatMap { root -> root.walkTopDown().filter { it.extension == "kt" }.toList() }

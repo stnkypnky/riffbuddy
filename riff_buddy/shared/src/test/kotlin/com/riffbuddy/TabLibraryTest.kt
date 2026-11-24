@@ -3,6 +3,7 @@ package com.riffbuddy
 import com.riffbuddy.domain.TabFile
 import com.riffbuddy.tabs.TabLibrary
 import java.io.File
+import okio.Path.Companion.toOkioPath
 import java.nio.file.Files
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
@@ -16,7 +17,7 @@ import org.junit.Test
 class TabLibraryTest {
 
     private val dir: File = Files.createTempDirectory("tabs").toFile()
-    private val library = TabLibrary(dir)
+    private val library = TabLibrary(dir.toOkioPath())
 
     @After
     fun cleanUp() {

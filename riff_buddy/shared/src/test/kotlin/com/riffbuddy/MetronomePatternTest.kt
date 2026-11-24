@@ -161,4 +161,12 @@ class MetronomePatternTest {
             assertTrue("$sound ends at $tail against a peak of $peak", tail < peak / 50)
         }
     }
+
+    @Test
+    fun `a count-in runs up to eight bars and no further`() {
+        assertEquals(8, MetronomeSettings(countInBars = 8).countInBars)
+        assertEquals(0, MetronomeSettings(countInBars = 0).countInBars)
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) { MetronomeSettings(countInBars = 9) }
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) { MetronomeSettings(countInBars = -1) }
+    }
 }

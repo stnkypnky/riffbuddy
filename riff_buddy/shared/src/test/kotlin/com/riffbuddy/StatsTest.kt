@@ -4,13 +4,19 @@ import com.riffbuddy.domain.Session
 import com.riffbuddy.domain.SessionItem
 import com.riffbuddy.domain.SessionMode
 import com.riffbuddy.domain.Stats
+import com.riffbuddy.domain.local
+import com.riffbuddy.domain.localDate
+import com.riffbuddy.domain.plusDays
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atTime
+import kotlinx.datetime.toInstant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
 
 /**
  * The stats match a hand-calculated fixture of 10 sessions exactly.
@@ -21,8 +27,8 @@ import java.time.ZoneId
  */
 class StatsTest {
 
-    private val zone: ZoneId = ZoneId.of("America/Los_Angeles")
-    private val today: LocalDate = LocalDate.of(2026, 9, 20)   // a Sunday
+    private val zone: TimeZone = TimeZone.of("America/Los_Angeles")
+    private val today: LocalDate = LocalDate(2026, 9, 20)   // a Sunday
 
     /** A session on [day], [minutes] long, starting at 18:00 local. */
     private fun session(
@@ -31,11 +37,11 @@ class StatsTest {
         minutes: Long,
         items: List<SessionItem> = emptyList(),
     ): Session {
-        val start = day.atTime(LocalTime.of(18, 0)).atZone(zone).toInstant()
+        val start = day.atTime(LocalTime(18, 0)).toInstant(zone)
         return Session(
             id = id,
             startedAt = start,
-            endedAt = start.plusSeconds(minutes * 60),
+            endedAt = (start + (minutes * 60).seconds),
             mode = if (items.isEmpty()) SessionMode.FREE else SessionMode.SONG,
             items = items.map { it.copy(sessionId = id) },
         )
@@ -68,19 +74,19 @@ class StatsTest {
      *   week to Sep 20    Sep 14..20 = 45+25+10+60+15+35+20 = 210 min
      */
     private val fixture: List<Session> = listOf(
-        session(1, LocalDate.of(2026, 9, 9), 20, listOf(item(1, 20))),
-        session(2, LocalDate.of(2026, 9, 10), 30, listOf(item(1, 20), item(2, 10))),
-        session(3, LocalDate.of(2026, 9, 11), 4),
-        session(4, LocalDate.of(2026, 9, 14), 45, listOf(item(1, 30), item(2, 15))),
-        session(5, LocalDate.of(2026, 9, 15), 25, listOf(item(2, 25))),
-        session(6, LocalDate.of(2026, 9, 16), 10),
-        session(7, LocalDate.of(2026, 9, 17), 60, listOf(item(1, 45))),
-        session(8, LocalDate.of(2026, 9, 18), 15, listOf(item(1, 15))),
-        session(9, LocalDate.of(2026, 9, 19), 35, listOf(item(1, 35))),
-        session(10, LocalDate.of(2026, 9, 20), 20, listOf(item(2, 20))),
+        session(1, LocalDate(2026, 9, 9), 20, listOf(item(1, 20))),
+        session(2, LocalDate(2026, 9, 10), 30, listOf(item(1, 20), item(2, 10))),
+        session(3, LocalDate(2026, 9, 11), 4),
+        session(4, LocalDate(2026, 9, 14), 45, listOf(item(1, 30), item(2, 15))),
+        session(5, LocalDate(2026, 9, 15), 25, listOf(item(2, 25))),
+        session(6, LocalDate(2026, 9, 16), 10),
+        session(7, LocalDate(2026, 9, 17), 60, listOf(item(1, 45))),
+        session(8, LocalDate(2026, 9, 18), 15, listOf(item(1, 15))),
+        session(9, LocalDate(2026, 9, 19), 35, listOf(item(1, 35))),
+        session(10, LocalDate(2026, 9, 20), 20, listOf(item(2, 20))),
     )
 
-    private val now: Instant = today.atTime(LocalTime.of(23, 0)).atZone(zone).toInstant()
+    private val now: Instant = today.atTime(LocalTime(23, 0)).toInstant(zone)
 
     @Test
     fun `total time matches the hand-calculated 264 minutes`() {
@@ -91,9 +97,9 @@ class StatsTest {
     fun `each day is totalled separately`() {
         val days = Stats.dayTotals(fixture, zone, now)
         assertEquals(10, days.size)
-        assertEquals(LocalDate.of(2026, 9, 9), days.first().date)
+        assertEquals(LocalDate(2026, 9, 9), days.first().date)
         assertEquals(20L * 60, days.first().seconds)
-        assertEquals(4L * 60, days.first { it.date == LocalDate.of(2026, 9, 11) }.seconds)
+        assertEquals(4L * 60, days.first { it.date == LocalDate(2026, 9, 11) }.seconds)
     }
 
     @Test
@@ -109,12 +115,12 @@ class StatsTest {
     fun `last practiced is the most recent session for that song`() {
         val totals = Stats.songTotals(fixture).associateBy { it.songId }
         assertEquals(
-            LocalDate.of(2026, 9, 19),
-            totals.getValue(1).lastPracticed!!.atZone(zone).toLocalDate(),
+            LocalDate(2026, 9, 19),
+            totals.getValue(1).lastPracticed!!.localDate(zone),
         )
         assertEquals(
-            LocalDate.of(2026, 9, 20),
-            totals.getValue(2).lastPracticed!!.atZone(zone).toLocalDate(),
+            LocalDate(2026, 9, 20),
+            totals.getValue(2).lastPracticed!!.localDate(zone),
         )
     }
 
@@ -149,15 +155,15 @@ class StatsTest {
      */
     @Test
     fun `a short day neither extends nor immediately ends a streak`() {
-        val early = fixture.filter { it.startedAt.atZone(zone).toLocalDate() <= LocalDate.of(2026, 9, 11) }
+        val early = fixture.filter { it.startedAt.localDate(zone) <= LocalDate(2026, 9, 11) }
 
         assertEquals(
             "four minutes today should not kill yesterday's streak",
-            2, Stats.currentStreak(early, zone, LocalDate.of(2026, 9, 11), now = now),
+            2, Stats.currentStreak(early, zone, LocalDate(2026, 9, 11), now = now),
         )
         assertEquals(
             "by the next day the short one has failed",
-            0, Stats.currentStreak(early, zone, LocalDate.of(2026, 9, 12), now = now),
+            0, Stats.currentStreak(early, zone, LocalDate(2026, 9, 12), now = now),
         )
         assertEquals("the run itself was Sep 9-10", 2, Stats.longestStreak(early, zone, now = now))
     }
@@ -170,7 +176,7 @@ class StatsTest {
     /** An unfinished session is live, not history: it must not be counted yet. */
     @Test
     fun `an open session is excluded from totals`() {
-        val open = Session(id = 99, startedAt = now.minusSeconds(600))
+        val open = Session(id = 99, startedAt = (now - (600).seconds))
         val withOpen = fixture + open
         assertEquals(264L * 60, Stats.totalSeconds(withOpen, now))
         assertTrue(open.isOpen)

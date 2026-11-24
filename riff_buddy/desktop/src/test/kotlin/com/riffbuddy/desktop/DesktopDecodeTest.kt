@@ -1,5 +1,6 @@
 package com.riffbuddy.desktop
 
+import kotlinx.coroutines.runBlocking
 import com.riffbuddy.AppServices
 import com.riffbuddy.ai.OnlineCheck
 import com.riffbuddy.audio.AudioFileException
@@ -13,6 +14,7 @@ import javax.sound.sampled.AudioSystem
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sin
+import okio.Path.Companion.toOkioPath
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -28,7 +30,7 @@ class DesktopDecodeTest {
     private val dir = Files.createTempDirectory("riffbuddy-decode").toFile()
     private val services = AppServices(
         JdbcDb(File(dir, "db")), DesktopAudioOutputs(), DesktopAudioInputs(), DesktopSecureStore(),
-        OnlineCheck { true }, dir, dir, "test",
+        OnlineCheck { true }, dir.toOkioPath(), dir.toOkioPath(), "test",
     )
     private val platform = DesktopPlatform(services, dir, dir)
 
@@ -66,7 +68,7 @@ class DesktopDecodeTest {
 
     private fun assertTone(file: File, rate: Int) {
         var lastProgress = 0f
-        val decoded = platform.decodeAudio(file.path, onProgress = { lastProgress = it }, canceled = { false })
+        val decoded = runBlocking { platform.decodeAudio(file.path, onProgress = { lastProgress = it }, canceled = { false }) }
         assertEquals(rate, decoded.pcm.sampleRate)
         assertEquals(rate, decoded.pcm.frames)
         assertTrue("440 Hz, got ${crossings(decoded.pcm.samples)}", abs(crossings(decoded.pcm.samples) - 440) <= 1)
@@ -88,7 +90,7 @@ class DesktopDecodeTest {
     @Test(expected = AudioFileException::class)
     fun `a file that is not audio says so`() {
         val file = File(dir, "notes.mp3").apply { writeText("not audio at all") }
-        platform.decodeAudio(file.path, onProgress = {}, canceled = { false })
+        runBlocking { platform.decodeAudio(file.path, onProgress = {}, canceled = { false }) }
     }
 
     /** No MP3 is bundled for tests; set RIFF_MP3 to a real one to check that path by hand. */
@@ -96,7 +98,7 @@ class DesktopDecodeTest {
     fun `an MP3 decodes to its full length`() {
         val path = System.getenv("RIFF_MP3")
         assumeTrue(path != null)
-        val decoded = platform.decodeAudio(path!!, onProgress = {}, canceled = { false })
+        val decoded = runBlocking { platform.decodeAudio(path!!, onProgress = {}, canceled = { false }) }
         println("MP3: ${decoded.pcm.sampleRate} Hz, ${decoded.durationMs} ms, truncated=${decoded.truncated}")
         assertTrue(decoded.durationMs > 10_000)
     }

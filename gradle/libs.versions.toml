@@ -29,6 +29,14 @@ jna = "5.17.0"
 javamp3 = "1.0.1"
 # Dispatchers.Main on the desktop is the Swing event thread.
 coroutines = "1.10.2"
+# Dates and times on every edition, the browser included.
+kotlinxDatetime = "0.7.1"
+# JSON parsing on every edition, under the app's org.json-style objects.
+kotlinxSerialization = "1.11.0"
+# HTTP on every edition: OkHttp underneath on Android and the desktop, fetch in a browser.
+ktor = "3.6.0"
+# Files and streams on every edition.
+okio = "3.18.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -65,6 +73,13 @@ alphaskia-macos = { group = "net.alphatab", name = "alphaSkia-macos", version.re
 java-keyring = { group = "com.github.javakeyring", name = "java-keyring", version.ref = "javaKeyring" }
 jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
 javamp3 = { group = "fr.delthas", name = "javamp3", version.ref = "javamp3" }
+kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
+ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-js = { group = "io.ktor", name = "ktor-client-js", version.ref = "ktor" }
+okio = { group = "com.squareup.okio", name = "okio", version.ref = "okio" }
+okio-fakefilesystem = { group = "com.squareup.okio", name = "okio-fakefilesystem", version.ref = "okio" }
 kotlinx-coroutines-swing = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-swing", version.ref = "coroutines" }
 # Test-only: a real SQLite on the JVM, so migrations can be run against a
 # fixture database instead of only being read. Never shipped.
@@ -75,4 +90,5 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }

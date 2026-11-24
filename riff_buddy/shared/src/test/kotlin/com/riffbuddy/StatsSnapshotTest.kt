@@ -10,27 +10,32 @@ import com.riffbuddy.domain.SongPart
 import com.riffbuddy.domain.SongStatus
 import com.riffbuddy.domain.StatsRange
 import com.riffbuddy.domain.StatsSnapshot
+import com.riffbuddy.domain.localDate
+import com.riffbuddy.domain.minusDays
 import com.riffbuddy.domain.music.Tuning
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atTime
+import kotlinx.datetime.toInstant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.DayOfWeek
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
 
 /** Every figure on the Stats tab, from fixture rows. */
 class StatsSnapshotTest {
 
-    private val zone = ZoneId.of("America/Los_Angeles")
+    private val zone = TimeZone.of("America/Los_Angeles")
     // Tuesday 22 Sep 2026, 20:00 in LA.
     private val now = Instant.parse("2026-09-23T03:00:00Z")
 
     /** A closed session starting [daysAgo] days before [now] at [hourLocal], lasting [minutes]. */
     private fun session(id: Long, daysAgo: Long, hourLocal: Int, minutes: Long, vararg items: SessionItem, rating: Int? = null): Session {
-        val day = now.atZone(zone).toLocalDate().minusDays(daysAgo)
-        val start = day.atTime(hourLocal, 0).atZone(zone).toInstant()
-        return Session(id = id, startedAt = start, endedAt = start.plusSeconds(minutes * 60), items = items.toList(), rating = rating)
+        val day = now.localDate(zone).minusDays(daysAgo)
+        val start = day.atTime(hourLocal, 0).toInstant(zone)
+        return Session(id = id, startedAt = start, endedAt = (start + (minutes * 60).seconds), items = items.toList(), rating = rating)
     }
 
     private val floods = Song(id = 1, title = "Floods", key = "C# minor", tuningId = 5, status = SongStatus.LEARNING)
@@ -48,7 +53,7 @@ class StatsSnapshotTest {
     private fun snap(range: StatsRange) = StatsSnapshot.of(
         range, zone, now, sessions, listOf(floods, wing),
         parts = listOf(SongPart(songId = 1, name = "Solo", stage = PartStage.MASTERED, masteredAt = now)),
-        tunings = tunings, takeTimes = listOf(now, now.minusSeconds(90L * 86_400)),
+        tunings = tunings, takeTimes = listOf(now, (now - (90L * 86_400).seconds)),
     )
 
     @Test
@@ -57,7 +62,7 @@ class StatsSnapshotTest {
         assertEquals(3, snap(StatsRange.WEEK).sessionCount)
         assertEquals(120L * 60, snap(StatsRange.ALL).totalSeconds)
         assertEquals(30L * 60, snap(StatsRange.WEEK).longestSeconds)
-        assertEquals(LocalDate.of(2026, 9, 22), snap(StatsRange.WEEK).busiestDay!!.first)
+        assertEquals(LocalDate(2026, 9, 22), snap(StatsRange.WEEK).busiestDay!!.first)
     }
 
     @Test
@@ -110,8 +115,8 @@ class StatsSnapshotTest {
     fun `the heat map starts on a Monday and covers the range`() {
         val week = snap(StatsRange.WEEK)
         assertEquals(DayOfWeek.MONDAY, week.heatStart.dayOfWeek)
-        assertTrue(week.heat.keys.all { !it.isBefore(week.heatStart) })
-        assertEquals(1800L, week.heat[LocalDate.of(2026, 9, 22)])
+        assertTrue(week.heat.keys.all { it >= week.heatStart })
+        assertEquals(1800L, week.heat[LocalDate(2026, 9, 22)])
     }
 
     @Test

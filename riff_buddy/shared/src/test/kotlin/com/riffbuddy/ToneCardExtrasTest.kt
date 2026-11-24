@@ -6,7 +6,7 @@ import com.riffbuddy.ai.ToneCardText
 import com.riffbuddy.domain.gear.AmpControl
 import com.riffbuddy.domain.gear.AmpKind
 import com.riffbuddy.domain.gear.AmpProfile
-import org.json.JSONObject
+import com.riffbuddy.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

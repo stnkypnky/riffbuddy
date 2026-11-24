@@ -1,6 +1,7 @@
 package com.riffbuddy
 
-import com.riffbuddy.ui.theme.Palette
+import com.riffbuddy.ui.theme.Finish
+import com.riffbuddy.ui.theme.Finishes
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.pow
@@ -15,7 +16,8 @@ import kotlin.math.pow
  * a test. Runs on the JVM, so it costs nothing to run constantly.
  *
  * Thresholds are WCAG 2.1: 4.5:1 for body text, 3:1 for large text and for the
- * edges of controls you have to be able to find.
+ * edges of controls you have to be able to find. Every check runs on every
+ * finish, dark and light, and names the finish that fails.
  */
 class ContrastTest {
 
@@ -36,39 +38,50 @@ class ContrastTest {
 
     private fun hex(argb: Long) = "#%06X".format(argb and 0xFFFFFF)
 
-    @Test
-    fun `every foreground is readable on every surface`() {
+    /** Runs [check] on every finish, collecting failures with the finish's name. */
+    private fun eachFinish(check: Finish.(MutableList<String>) -> Unit) {
         val failures = mutableListOf<String>()
-        Palette.FOREGROUNDS.forEach { fg ->
-            Palette.SURFACES.forEach { bg ->
-                val r = ratio(fg, bg)
-                if (r < 4.5) failures += "${hex(fg)} on ${hex(bg)} = %.2f".format(r)
-            }
+        Finishes.ALL.forEach { f ->
+            val own = mutableListOf<String>()
+            f.check(own)
+            own.forEach { failures += "${f.label}: $it" }
         }
-        assertTrue("below 4.5:1 — $failures", failures.isEmpty())
+        assertTrue(failures.joinToString("\n"), failures.isEmpty())
     }
 
     @Test
-    fun `text on its containers is readable`() {
+    fun `every foreground is readable on every surface`() = eachFinish { out ->
+        foregrounds.forEach { fg ->
+            surfaces.forEach { bg ->
+                val r = ratio(fg, bg)
+                if (r < 4.5) out += "${hex(fg)} on ${hex(bg)} = %.2f, needs 4.5".format(r)
+            }
+        }
+    }
+
+    @Test
+    fun `text on its containers is readable`() = eachFinish { out ->
         listOf(
-            Palette.ON_AMBER to Palette.AMBER,
-            Palette.ON_AMBER to Palette.AMBER_STRONG,
-            Palette.ON_AMBER to Palette.AMBER_DEEP,
-            Palette.ON_AMBER_CONTAINER to Palette.AMBER_CONTAINER,
-            Palette.ON_SUCCESS_CONTAINER to Palette.SUCCESS_CONTAINER,
-            Palette.ON_DANGER_CONTAINER to Palette.DANGER_CONTAINER,
+            onAccent to accent,
+            onAccent to accentStrong,
+            onAccent to accentDeep,
+            onAccentContainer to accentContainer,
+            onSuccessContainer to successContainer,
+            onDangerContainer to dangerContainer,
+            onSuccess to success,
+            onDanger to danger,
         ).forEach { (fg, bg) ->
             val r = ratio(fg, bg)
-            assertTrue("${hex(fg)} on ${hex(bg)} = %.2f, needs 4.5".format(r), r >= 4.5)
+            if (r < 4.5) out += "${hex(fg)} on ${hex(bg)} = %.2f, needs 4.5".format(r)
         }
     }
 
     /** A control's edge has to be findable: 3:1 against what it sits on. */
     @Test
-    fun `outline is visible against the surfaces it borders`() {
-        listOf(Palette.BG, Palette.SURFACE_LOW, Palette.SURFACE).forEach { bg ->
-            val r = ratio(Palette.OUTLINE, bg)
-            assertTrue("outline on ${hex(bg)} = %.2f, needs 3.0".format(r), r >= 3.0)
+    fun `outline is visible against the surfaces it borders`() = eachFinish { out ->
+        listOf(bg, surfaceLow, surface).forEach { b ->
+            val r = ratio(outline, b)
+            if (r < 3.0) out += "outline on ${hex(b)} = %.2f, needs 3.0".format(r)
         }
     }
 
@@ -78,9 +91,9 @@ class ContrastTest {
      * indistinguishable — the whole screen read as one flat rectangle.
      */
     @Test
-    fun `a card is visibly raised off the background`() {
-        val r = ratio(Palette.SURFACE, Palette.BG)
-        assertTrue("card only %.2f from the background — too flat".format(r), r >= 1.30)
+    fun `a card is visibly raised off the background`() = eachFinish { out ->
+        val r = ratio(surface, bg)
+        if (r < 1.30) out += "card only %.2f from the background — too flat".format(r)
     }
 
     /**
@@ -89,17 +102,35 @@ class ContrastTest {
      * from it.
      */
     @Test
-    fun `unlit lamp is visible on card and on background`() {
-        listOf(Palette.SURFACE, Palette.BG).forEach { bg ->
-            val r = ratio(Palette.LAMP_DARK, bg)
-            assertTrue("unlit lamp only %.2f from ${hex(bg)}".format(r), r >= 1.30)
+    fun `unlit lamp is visible on card and on background`() = eachFinish { out ->
+        listOf(surface, bg).forEach { b ->
+            val r = ratio(lampDark, b)
+            if (r < 1.30) out += "unlit lamp only %.2f from ${hex(b)}".format(r)
         }
     }
 
     /** ...and must be unmistakably dimmer than the same lamp lit. */
     @Test
-    fun `unlit lamp reads as off next to a lit one`() {
-        val r = ratio(Palette.LAMP_DARK, Palette.AMBER_STRONG)
-        assertTrue("lit and unlit only %.2f apart".format(r), r >= 2.5)
+    fun `unlit lamp reads as off next to a lit one`() = eachFinish { out ->
+        val r = ratio(lampDark, accentStrong)
+        if (r < 2.5) out += "lit and unlit only %.2f apart".format(r)
+    }
+
+    /** A saved choice is found again by its id; ids never collide. */
+    @Test
+    fun `finish ids are unique and round-trip`() {
+        val ids = Finishes.ALL.map { it.id }
+        assertTrue("duplicate ids in $ids", ids.toSet().size == ids.size)
+        Finishes.ALL.forEach { assertTrue(Finishes.byId(it.id) === it) }
+        assertTrue(Finishes.byId(null) === Finishes.DEFAULT)
+        assertTrue(Finishes.byId("no-such-finish") === Finishes.DEFAULT)
+    }
+
+    /** The light finishes really are light, and the dark ones dark. */
+    @Test
+    fun `each finish is the brightness it says`() = eachFinish { out ->
+        val l = luminance(bg)
+        if (dark && l > 0.2) out += "marked dark but background luminance is %.2f".format(l)
+        if (!dark && l < 0.5) out += "marked light but background luminance is %.2f".format(l)
     }
 }

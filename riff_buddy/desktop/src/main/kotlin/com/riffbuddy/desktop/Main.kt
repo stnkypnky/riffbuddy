@@ -3,6 +3,7 @@ package com.riffbuddy.desktop
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.loadSvgPainter
@@ -12,22 +13,25 @@ import androidx.compose.ui.text.platform.Font
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.riffbuddy.AppServices
 import com.riffbuddy.ai.OnlineCheck
 import com.riffbuddy.platform.LocalPlatform
+import com.riffbuddy.sync.nearbySync
 import com.riffbuddy.ui.Intro
 import com.riffbuddy.ui.LocalShortcuts
 import com.riffbuddy.ui.RiffBuddyContent
 import com.riffbuddy.ui.Shortcut
 import com.riffbuddy.ui.ShortcutRegistry
+import com.riffbuddy.ui.settings.SyncHost
+import com.riffbuddy.ui.settings.SyncSection
 import com.riffbuddy.ui.theme.RiffBuddyTheme
 import java.awt.Dimension
 import java.io.File
 import java.util.prefs.Preferences
+import okio.Path.Companion.toOkioPath
 
 /** Riff Buddy on a desktop computer: the same app as on Android, in a window. */
 fun main() {
@@ -52,12 +56,12 @@ fun main() {
         // A request with no connection fails fast on a desktop and says so;
         // there is no captive-portal case worth checking for ahead of it.
         isOnline = OnlineCheck { true },
-        filesDir = dataDir,
-        cacheDir = cacheDir,
+        filesDir = dataDir.toOkioPath(),
+        cacheDir = cacheDir.toOkioPath(),
         appVersion = System.getProperty("riffbuddy.version") ?: "desktop",
-        deviceName = computerName(),
     )
-    val platform = DesktopPlatform(services, filesDir = dataDir, cacheDir = cacheDir)
+    val sync = services.nearbySync(deviceName = computerName())
+    val platform = DesktopPlatform(services, dataFolder = dataDir, cacheFolder = cacheDir)
     val prefs = Preferences.userRoot().node("riffbuddy/window")
     val reducedMotion = SystemMotion.reduced()
 
@@ -89,9 +93,15 @@ fun main() {
                 // Narrower than a phone held upright is narrower than any layout here.
                 window.minimumSize = Dimension(420, 560)
             }
-            RiffBuddyTheme(condensedFont = Condensed, systemReducedMotion = reducedMotion) {
+            RiffBuddyTheme(condensedFont = AppFonts.condensed, textFont = AppFonts.text, systemReducedMotion = reducedMotion) {
                 CompositionLocalProvider(LocalPlatform provides platform, LocalShortcuts provides shortcuts) {
-                    RiffBuddyContent(services, overlay = { Intro() })
+                    RiffBuddyContent(
+                        services,
+                        syncSection = { SyncSection(sync) },
+                        syncHost = { SyncHost(sync) },
+                        dataChanges = { sync.dataVersion },
+                        overlay = { Intro() },
+                    )
                 }
             }
         }
@@ -99,13 +109,24 @@ fun main() {
 }
 
 /**
- * Roboto Condensed for the big numerals — the face Android phones use for
- * them — bundled so the tempo reads the same on every computer.
+ * The bundled faces, the same files every edition ships, so the app reads the
+ * same on every computer: Barlow Condensed for big numerals and titles, Inter
+ * for text.
  */
-private val Condensed = FontFamily(
-    Font("fonts/RobotoCondensed.ttf", FontWeight.Normal),
-    Font("fonts/RobotoCondensed.ttf", FontWeight.Medium),
-)
+object AppFonts {
+    val condensed = FontFamily(
+        Font("fonts/BarlowCondensed-Medium.ttf", FontWeight.Normal),
+        Font("fonts/BarlowCondensed-Medium.ttf", FontWeight.Medium),
+        Font("fonts/BarlowCondensed-SemiBold.ttf", FontWeight.SemiBold),
+        Font("fonts/BarlowCondensed-Bold.ttf", FontWeight.Bold),
+    )
+    val text = FontFamily(
+        Font("fonts/Inter-Regular.ttf", FontWeight.Normal),
+        Font("fonts/Inter-Medium.ttf", FontWeight.Medium),
+        Font("fonts/Inter-SemiBold.ttf", FontWeight.SemiBold),
+        Font("fonts/Inter-SemiBold.ttf", FontWeight.Bold),
+    )
+}
 
 /** Where each system keeps an app's data, so it lives where people and backup tools expect. */
 object DesktopPaths {

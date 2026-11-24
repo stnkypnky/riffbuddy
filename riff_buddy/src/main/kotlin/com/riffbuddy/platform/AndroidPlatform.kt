@@ -45,13 +45,20 @@ import com.riffbuddy.tabs.AlphaTabPlayer
 import com.riffbuddy.tabs.PlaybackMemory
 import com.riffbuddy.tabs.TabPlayer
 import com.riffbuddy.tabs.TabSource
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
-import java.time.ZonedDateTime
+import kotlin.time.Instant
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okio.BufferedSink
+import okio.Path
+import okio.Path.Companion.toOkioPath
+import okio.Source
+import okio.buffer
+import okio.sink
+import okio.source
 
 /**
  * The shared [Platform] on Android: what screens reach through
@@ -68,12 +75,12 @@ class AndroidPlatform(private val activity: ComponentActivity, private val app: 
 
     override val audioOutputs: AudioOutputs get() = app.services.audioOutputs
 
-    override fun decodeAudio(ref: String, onProgress: (Float) -> Unit, canceled: () -> Boolean): DecodedAudio =
+    override suspend fun decodeAudio(ref: String, onProgress: (Float) -> Unit, canceled: () -> Boolean): DecodedAudio =
         AudioDecoder.decode(context, Uri.parse(ref), onProgress, canceled)
 
     override val canEncodeM4a: Boolean get() = true
 
-    override fun encodeM4a(pcm: Pcm, out: File) = AacEncoder.encode(pcm, out)
+    override fun encodeM4a(pcm: Pcm, out: Path) = AacEncoder.encode(pcm, out.toFile())
 
     override fun countdownBeeper(): CountdownBeeper? {
         val tones = runCatching { ToneGenerator(AudioManager.STREAM_MUSIC, 70) }.getOrNull() ?: return null
@@ -110,10 +117,10 @@ class AndroidPlatform(private val activity: ComponentActivity, private val app: 
 
     // ---- files -----------------------------------------------------------------
 
-    override val filesDir: File get() = app.filesDir
-    override val cacheDir: File get() = app.cacheDir
+    override val filesDir: Path get() = app.filesDir.toOkioPath()
+    override val cacheDir: Path get() = app.cacheDir.toOkioPath()
 
-    override fun openAsset(path: String): InputStream = context.assets.open(path)
+    override fun openAsset(path: String): Source = context.assets.open(path).source()
 
     @Composable
     override fun rememberOpenFile(mimeTypes: List<String>, keepAccess: Boolean, onPicked: (PickedFile?) -> Unit): () -> Unit {
@@ -148,8 +155,8 @@ class AndroidPlatform(private val activity: ComponentActivity, private val app: 
         return PickedFile(uri.toString(), name, size)
     }
 
-    override fun openInput(ref: String): InputStream =
-        context.contentResolver.openInputStream(Uri.parse(ref)) ?: error("That file could not be opened.")
+    override fun openInput(ref: String): Source =
+        (context.contentResolver.openInputStream(Uri.parse(ref)) ?: error("That file could not be opened.")).source()
 
     /** Gives the grant back, so Android's small quota of persisted grants is not used up. */
     override fun releaseAccess(ref: String) {
@@ -158,22 +165,22 @@ class AndroidPlatform(private val activity: ComponentActivity, private val app: 
         }
     }
 
-    override fun refOf(file: File): String = Uri.fromFile(file).toString()
+    override fun refOf(file: Path): String = Uri.fromFile(file.toFile()).toString()
 
     @Composable
-    override fun rememberCreateFile(mimeType: String, write: suspend (OutputStream) -> Unit): (String) -> Unit {
+    override fun rememberCreateFile(mimeType: String, write: suspend (BufferedSink) -> Unit): (String) -> Unit {
         val scope = rememberCoroutineScope()
         val latest by rememberUpdatedState(write)
         val launcher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(mimeType)) { uri ->
             if (uri != null) scope.launch {
-                context.contentResolver.openOutputStream(uri)?.use { latest(it) }
+                context.contentResolver.openOutputStream(uri)?.sink()?.buffer()?.use { latest(it) }
             }
         }
         return { name -> launcher.launch(name) }
     }
 
     @Composable
-    override fun rememberSaveCopy(extension: String, mimeType: String, onResult: (String) -> Unit): (File) -> Unit {
+    override fun rememberSaveCopy(extension: String, mimeType: String, onResult: (String) -> Unit): (Path) -> Unit {
         val scope = rememberCoroutineScope()
         val report by rememberUpdatedState(onResult)
         // A path, saveable: the save dialog is another app, and Android may rebuild
@@ -202,15 +209,15 @@ class AndroidPlatform(private val activity: ComponentActivity, private val app: 
                 )
             }
         }
-        return { file -> pending = file.path; launcher.launch(file.name) }
+        return { file -> pending = file.toFile().path; launcher.launch(file.name) }
     }
 
     /**
      * Shared through the takes FileProvider, which exposes only the cache's
      * `exports/` folder — where exported takes are written.
      */
-    override fun shareFile(file: File, mimeType: String, title: String) {
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.takes", file)
+    override fun shareFile(file: Path, mimeType: String, title: String) {
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.takes", file.toFile())
         val send = Intent(Intent.ACTION_SEND).apply {
             type = mimeType
             putExtra(Intent.EXTRA_STREAM, uri)
@@ -243,7 +250,7 @@ class AndroidPlatform(private val activity: ComponentActivity, private val app: 
 
     // ---- reminders -------------------------------------------------------------
 
-    override fun scheduleReminder(settings: ReminderSettings): ZonedDateTime? = Reminders.schedule(context, settings)
+    override fun scheduleReminder(settings: ReminderSettings): Instant? = Reminders.schedule(context, settings)
 
     override suspend fun rearmReminders() = Reminders.rearm(context)
 

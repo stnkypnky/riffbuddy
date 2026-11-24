@@ -74,7 +74,7 @@ private class AndroidPcmOutput(private val track: AudioTrack, override val sampl
     private val ts = AudioTimestamp()
 
     override val bufferFrames: Int get() = track.bufferSizeInFrames
-    override fun write(pcm: ShortArray, offset: Int, frames: Int) = track.write(pcm, offset, frames)
+    override suspend fun write(pcm: ShortArray, offset: Int, frames: Int) = track.write(pcm, offset, frames)
     override fun play() = track.play()
     override fun pause() = track.pause()
     override fun flush() = track.flush()
@@ -137,7 +137,7 @@ private class AndroidPcmInput(private val mic: RawMicrophone, private val record
     private val ts = AudioTimestamp()
 
     override fun start() = record.startRecording()
-    override fun read(buffer: FloatArray, offset: Int, frames: Int) =
+    override suspend fun read(buffer: FloatArray, offset: Int, frames: Int) =
         record.read(buffer, offset, frames, AudioRecord.READ_BLOCKING)
 
     override fun timestamp(into: FrameTime): Boolean {
