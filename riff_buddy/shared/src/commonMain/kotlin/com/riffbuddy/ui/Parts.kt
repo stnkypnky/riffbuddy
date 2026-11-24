@@ -44,7 +44,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffbuddy.ui.help.HelpButton
 import com.riffbuddy.ui.help.helpTopicFor
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.riffbuddy.ui.tactile.AssistChip
 import com.riffbuddy.ui.tactile.FilterChip
+import com.riffbuddy.ui.tactile.IconButton
 import com.riffbuddy.ui.theme.Elevation
 import com.riffbuddy.ui.theme.RiffColors
 import com.riffbuddy.ui.theme.Space
@@ -254,7 +263,13 @@ fun EmptyState(
 
 /** The seven tools, each chip with its icon: drawn once by the shell, above whichever tool is showing. */
 @Composable
-fun ToolChips(current: Tool, onPick: (Tool) -> Unit) {
+fun ToolChips(
+    current: Tool,
+    onPick: (Tool) -> Unit,
+    collapsible: Boolean = false,
+    collapsed: Boolean = false,
+    onCollapsedChange: (Boolean) -> Unit = {},
+) {
     // Centered, and wrapping onto a second line only where the screen is too
     // narrow for one (a phone held upright). The shell gives this row a width
     // set by the window alone — the reading width, or the wide width on a
@@ -262,7 +277,16 @@ fun ToolChips(current: Tool, onPick: (Tool) -> Unit) {
     // below, so the chips stay put as the tools change. Its edge
     // padding is the screens' own, so the chips line up with the content under
     // them. The "?" sits at the end and follows the tool that's showing.
+    //
+    // On a phone the wrapped chips take three lines of a small screen, so they
+    // can fold down to the one tool that's showing. Folded, "All tools" opens
+    // them for a single pick and they fold again once a tool is chosen; the
+    // arrow beside the "?" folds or unfolds them for good.
     val edge = screenPadding()
+    var peeking by remember { mutableStateOf(false) }
+    val folded = collapsible && collapsed && !peeking
+    // Material's chips already reach 48 dp of touch area around this height.
+    val chipModifier = Modifier.heightIn(min = 40.dp)
     Row(
         Modifier.fillMaxWidth().padding(start = edge, end = edge - Space.sm, top = Space.md),
         verticalAlignment = Alignment.Top,
@@ -272,16 +296,53 @@ fun ToolChips(current: Tool, onPick: (Tool) -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(Space.sm, Alignment.CenterHorizontally),
             verticalArrangement = Arrangement.spacedBy(Space.xs),
         ) {
-            Tool.entries.forEach { tool ->
+            if (folded) {
                 FilterChip(
-                    selected = tool == current,
-                    onClick = { onPick(tool) },
-                    label = { Text(tool.label, maxLines = 1) },
-                    leadingIcon = { Icon(tool.icon, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                    modifier = Modifier.heightIn(min = 40.dp),
+                    selected = true,
+                    onClick = { peeking = true },
+                    label = { Text(current.label, maxLines = 1) },
+                    leadingIcon = { Icon(current.icon, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    modifier = chipModifier,
+                )
+                AssistChip(
+                    onClick = { peeking = true },
+                    label = { Text("All tools", maxLines = 1) },
+                    trailingIcon = { Icon(Icons.Filled.ExpandMore, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    modifier = chipModifier,
+                )
+            } else {
+                Tool.entries.forEach { tool ->
+                    FilterChip(
+                        selected = tool == current,
+                        onClick = {
+                            onPick(tool)
+                            peeking = false
+                        },
+                        label = { Text(tool.label, maxLines = 1) },
+                        leadingIcon = { Icon(tool.icon, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                        modifier = chipModifier,
+                    )
+                }
+            }
+        }
+        // Folded, the one line has room for the arrow beside the "?". Open, it
+        // goes under the "?", so the chips keep their width and their lines.
+        val fold = @Composable {
+            val open = !folded
+            IconButton(onClick = {
+                peeking = false
+                onCollapsedChange(open)
+            }) {
+                Icon(
+                    if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                    contentDescription = if (open) "Fold up the tools" else "Show all the tools",
                 )
             }
         }
-        HelpButton(helpTopicFor(current))
+        if (collapsible && folded) fold()
+        Column {
+            HelpButton(helpTopicFor(current))
+            if (collapsible && !folded) fold()
+        }
     }
 }

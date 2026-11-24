@@ -288,6 +288,8 @@ fun RiffBuddyShell(
     val metronome by engine.state.collectAsStateWithLifecycle()
     val practiceState by practice.state.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+    var toolsFolded by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { toolsFolded = settingsRepo.setting(TOOLS_FOLDED) == "1" }
 
     var songs by remember { mutableStateOf(emptyList<Song>()) }
     /** Built-ins and the player's own, as stored (so each has its id). */
@@ -1009,7 +1011,20 @@ fun RiffBuddyShell(
                         // A desktop-wide window has room for all seven chips on one
                         // line; anything narrower keeps the reading width and wraps.
                         val chipsWidth = if (width == WidthClass.EXPANDED) Widths.wide else Widths.reading
-                        Box(Modifier.widthIn(max = chipsWidth)) { ToolChooser(tool) { tool = it } }
+                        Box(Modifier.widthIn(max = chipsWidth)) {
+                            // Only a phone-width screen folds them: wider ones fit
+                            // the chips on a line or two without crowding the tool.
+                            com.riffbuddy.ui.ToolChips(
+                                current = tool,
+                                onPick = { tool = it },
+                                collapsible = compact,
+                                collapsed = toolsFolded,
+                                onCollapsedChange = { folded ->
+                                    toolsFolded = folded
+                                    scope.launch { settingsRepo.putSetting(TOOLS_FOLDED, if (folded) "1" else "0") }
+                                },
+                            )
+                        }
                     }
                 }
                 Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.TopCenter) {
@@ -1999,10 +2014,6 @@ private fun plural(minutes: Long, minuteWord: String, hourWord: String): String 
     return if (hours == 1L) "1 $hourWord" else "$hours ${hourWord}s"
 }
 
-/** The Tools tab's three tools, chosen the same way from each of them. */
-@Composable
-private fun ToolChooser(current: Tool, onPick: (Tool) -> Unit) = com.riffbuddy.ui.ToolChips(current, onPick)
-
 @Composable
 private fun KeepScreenOn(on: Boolean) {
     com.riffbuddy.platform.LocalPlatform.current.KeepScreenOn(on)
@@ -2229,6 +2240,8 @@ private val TWO_PANE_FROM = 1100.dp
 
 /** Set once the first milestone check has recorded history silently. */
 private const val MILESTONES_SEEDED = "milestones_seeded"
+/** "1" when the player has folded the tool chips on a phone. */
+private const val TOOLS_FOLDED = "tools_folded"
 
 /** The milestone keys this install has seen, so catalog additions arrive quietly. */
 private const val MILESTONES_KNOWN = "milestones_known"
