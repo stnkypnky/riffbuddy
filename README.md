@@ -299,9 +299,8 @@ export RIFFBUDDY_WEB_ONLY=1                  # skip the Android app
 # Serve that folder on localhost (for example python3 -m http.server) and open it.
 ```
 
-A `v*` tag also publishes the web edition to GitHub Pages
-(`.github/workflows/web.yml`), once Pages is set to deploy from GitHub
-Actions in the repository's settings.
+Every push to `main` that changes the app publishes the web edition to
+GitHub Pages (`.github/workflows/web.yml`).
 
 A signed release build needs a `keystore.properties` in the project root
 (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`). It and the

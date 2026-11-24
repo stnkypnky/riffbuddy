@@ -1,15 +1,19 @@
 # Builds Riff Buddy's web edition and publishes it with GitHub Pages, as an
 # installable app that runs offline after the first visit.
 #
-# Runs when a version tag (v0.1.0, ...) is pushed, or by hand from the
-# Actions tab. Pages must be set to deploy from GitHub Actions, once, in the
-# repository's settings. The built site is searched for personal strings
+# Runs when the app changes on main, or by hand from the Actions tab. From
+# main, not a version tag: the web app is the main way to get Riff Buddy, so
+# it follows main, and the Pages environment only lets main deploy. Pages
+# must be set to deploy from GitHub Actions, once, in the repository's
+# settings. The built site is searched for personal strings
 # before anything is published, and nothing is if one turns up.
 name: Web edition
 
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+    # The front page and guide aren't part of the site.
+    paths: ["riff_buddy/**", ".github/workflows/web.yml"]
   workflow_dispatch:
 
 permissions:

@@ -30,8 +30,8 @@ jobs:
           - os: windows-latest
             task: packageMsi
             installer: riff_buddy/desktop/build/compose/binaries/main/msi/*.msi
-          # Apple Silicon.
-          - os: macos-14
+          # Apple Silicon. (macos-14 was retired.)
+          - os: macos-15
             task: packageDmg
             installer: riff_buddy/desktop/build/compose/binaries/main/dmg/*.dmg
     runs-on: ${{ matrix.os }}
