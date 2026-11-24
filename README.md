@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎸 Riff Buddy
+# Riff Buddy
 
 ### Your practice buddy for every guitar player
 
@@ -8,7 +8,7 @@ Tune up, lock in with the click, loop the tricky bit, and watch yourself
 get better. Whether you're learning your first three chords or tightening
 up a set list, Riff Buddy is here to make practice the fun part.
 
-## ▶ [Play now in your browser](https://stnkypnky.github.io/riffbuddy/)
+## [Play now in your browser](https://stnkypnky.github.io/riffbuddy/)
 
 **Free** · **No sign-up** · **Works offline** · **Phone, tablet or computer**
 
@@ -20,7 +20,7 @@ up a set list, Riff Buddy is here to make practice the fun part.
 
 ## What's in the case
 
-### 🤖 A coach in your corner
+### A coach in your corner
 Ask anything: how to clean up a chord change, what to practice for the next
 half hour, or where to set the knobs on *your* amp to get a song's tone. The
 coach knows your guitar, your amp and the songs you're learning, and pitches
@@ -29,37 +29,37 @@ ideas from your own songbook.
 
 <img src="docs/screenshots/coach.png" alt="The coach greeting the player, with question ideas about their own songs" width="900">
 
-### 🥁 A metronome that pushes you (gently)
+### A metronome that pushes you (gently)
 Type any tempo, tap one in, or let the speed trainer creep it up a few BPM
 every few bars until that riff is up to speed.
 
 <img src="docs/screenshots/metronome.png" alt="The metronome at 100 BPM beside the speed trainer's setup" width="900">
 
-### 📖 A songbook that keeps score
+### A songbook that keeps score
 Every song you're working on, from wishlist to mastered, with how close you
 are to full speed, its key and capo, and a quick link to find the tab.
 
 <img src="docs/screenshots/song.png" alt="The songbook beside a song's page, showing 82 of 100 BPM" width="900">
 
-### 🎼 Theory you can see (and hear)
+### Theory you can see (and hear)
 Scales, chords and keys right on the neck, in fret numbers, not sheet music.
 Step through the positions and tap **Play** to hear them.
 
 <img src="docs/screenshots/theory.png" alt="The A minor pentatonic scale across the whole neck" width="900">
 
 ### …and a whole pedalboard more
-- 🎯 **Tuner**, with a reference note for every string
-- 🔁 **Looper** that slows a song down without changing its pitch
-- 📜 **Tab player** that plays along with you
-- 🎙️ **Recorder** to hear how you really sound
-- 🎹 **Backing tracks** to jam over, in the key and tempo you pick
-- 🔥 **Streaks, routines, lessons and stats** to keep you coming back
+- **Tuner**, with a reference note for every string
+- **Looper** that slows a song down without changing its pitch
+- **Tab player** that plays along with you
+- **Recorder** to hear how you really sound
+- **Backing tracks** to jam over, in the key and tempo you pick
+- **Streaks, routines, lessons and stats** to keep you coming back
 
-### 📱 Made for your phone, too
+### Made for your phone, too
 
 <img src="docs/screenshots/phones.png" alt="Home, Coach and Metronome on a phone, in three color schemes" width="900">
 
-### 🎨 Pick your finish
+### Pick your finish
 Ten color schemes named after classic guitar finishes: Sunburst, Cherry,
 Rosewood, Ebony, Mahogany, Surf Green and Lake Placid Blue, or go light with
 Maple, Olympic White and Butterscotch. Find them in **Me › Settings ›
@@ -114,7 +114,7 @@ Start with **Tools**: tune up, start the click, then open **Theory**, pick a
 scale and tap **Play** to hear it. Stuck anywhere? Every screen has a **?**
 in the corner with answers for that screen.
 
-> 📘 **Want the full tour?** The [illustrated guide (PDF)](docs/Riff-Buddy-Guide.pdf)
+> **Want the full tour?** The [illustrated guide (PDF)](docs/Riff-Buddy-Guide.pdf)
 > walks through every screen.
 
 ---
@@ -200,7 +200,7 @@ It needs a free key from any **one** of these. None needs a credit card:
 
 | Provider | Good for | Where to get a key |
 |---|---|---|
-| **Groq** ⭐ easiest start | Its recommended model, `gpt-oss-120b`, is the smartest free one. About 1,000 requests a day. | [console.groq.com/keys](https://console.groq.com/keys) |
+| **Groq** (easiest start) | Its recommended model, `gpt-oss-120b`, is the smartest free one. About 1,000 requests a day. | [console.groq.com/keys](https://console.groq.com/keys) |
 | **Gemini** (Google) | A good second key. About 200 a day. | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
 | **Mistral** | Free "Experiment" plan with its largest model. Asks to verify a phone number, and may use free-plan requests for training. | [console.mistral.ai/api-keys](https://console.mistral.ai/api-keys) |
 | **OpenRouter** | 50 free requests a day across many free models. | [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys) |
@@ -258,7 +258,7 @@ is off unless you turn it on.
 Still stuck? Tap **?** on the screen you're on. Most questions are answered
 there, and **Ask the Coach** takes it from there.
 
-**Now go play something. 🤘**
+**Now go play something.**
 
 ---
 
