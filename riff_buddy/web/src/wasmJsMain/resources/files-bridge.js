@@ -27,12 +27,20 @@ window.rbFiles = {
     return new Uint8Array(await (await h.getFile()).arrayBuffer());
   },
 
+  // Writes still under way, so an update never reloads the page in the middle of one.
+  pending: 0,
+
   async write(path, bytes) {
-    const parts = path.split('/').filter(Boolean), name = parts.pop();
-    const h = await (await this.dir(parts.join('/'), true)).getFileHandle(name, { create: true });
-    const w = await h.createWritable();
-    await w.write(bytes);
-    await w.close();
+    this.pending++;
+    try {
+      const parts = path.split('/').filter(Boolean), name = parts.pop();
+      const h = await (await this.dir(parts.join('/'), true)).getFileHandle(name, { create: true });
+      const w = await h.createWritable();
+      await w.write(bytes);
+      await w.close();
+    } finally {
+      this.pending--;
+    }
   },
 
   async remove(path) {

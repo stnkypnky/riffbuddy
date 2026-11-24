@@ -1,7 +1,9 @@
 // The service worker: it keeps every file of the app, so after the first
 // visit Riff Buddy opens and runs with no connection at all. The build writes
 // the file list and a version into this copy; a new build means a new version,
-// which the page offers as "reload". Requests to other sites (the AI
+// which waits until the page says it's a good moment, then takes over and the
+// page reloads. Until then the old version's files stay, so the page that's
+// open never finds one of its own missing. Requests to other sites (the AI
 // providers) pass straight through.
 const VERSION = '__VERSION__';
 const FILES = __FILES__;
@@ -19,7 +21,7 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// The page says when the player has agreed to the new version.
+// The page says when the new version can take over.
 self.addEventListener('message', (e) => { if (e.data === 'update') self.skipWaiting(); });
 
 self.addEventListener('fetch', (e) => {

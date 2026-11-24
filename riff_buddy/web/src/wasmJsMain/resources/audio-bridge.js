@@ -57,7 +57,13 @@ window.rbAudio = {
   cmd(id, c) {
     const s = this.streams[id];
     if (!s) return;
+    if (c === 'play') s.playing = true; else if (c === 'pause') s.playing = false;
     if (s.node) s.node.port.postMessage({ cmd: c }); else s.cmds.push(c);
+  },
+  // Sound playing or the microphone open: the app is in use even with the
+  // screen off, so an update waits.
+  busy() {
+    return Object.values(this.streams).some(s => s.playing) || Object.keys(this.inputs).length > 0;
   },
   volume(id, v) { const s = this.streams[id]; if (s) { s.volume = v; if (s.gain) s.gain.gain.value = v; } },
   played(id) { const s = this.streams[id]; return s ? s.played : 0; },

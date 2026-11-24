@@ -1,6 +1,6 @@
 // The page as an installable app: the service worker that keeps it working
-// offline, the "new version" notice, asking the browser to keep the data once
-// installed, and, on an iPhone or iPad, how to install it.
+// offline, updating itself to a new version, asking the browser to keep the
+// data once installed, and, on an iPhone or iPad, how to install it.
 window.rbPwa = {
   installed() {
     return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
@@ -8,23 +8,38 @@ window.rbPwa = {
 
   start() {
     if ('serviceWorker' in navigator) {
-      let agreed = false;
-      navigator.serviceWorker.register('sw.js').then((reg) => {
-        const offer = () => {
-          if (reg.waiting && navigator.serviceWorker.controller) {
-            this.banner('A new version of Riff Buddy is ready.', 'Reload', () => { agreed = true; reg.waiting.postMessage('update'); });
-          }
+      // A new version updates itself, but only at a moment that interrupts
+      // nothing: before the player has touched the app since it opened, or
+      // while it's in the background with no sound playing and the
+      // microphone closed. The data is saved first, then the page reloads.
+      let touched = false, applying = false;
+      ['pointerdown', 'keydown'].forEach(t => document.addEventListener(t, () => { touched = true; }, { capture: true, once: true }));
+      const busy = () => !!((window.rbAudio && rbAudio.busy()) || (window.rbFiles && rbFiles.pending > 0));
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => {
+        const apply = async () => {
+          if (applying || !reg.waiting || !navigator.serviceWorker.controller) return;
+          if (busy() || !(document.visibilityState === 'hidden' || !touched)) return;
+          applying = true;
+          try { if (window.rbDb && rbDb.saveNow) await rbDb.saveNow(); } catch (e) {}
+          // Busy again while saving: try at the next quiet moment instead.
+          if (busy() || !reg.waiting) { applying = false; return; }
+          reg.waiting.postMessage('update');
         };
-        offer();
+        apply();
         reg.addEventListener('updatefound', () => {
           const w = reg.installing;
-          if (w) w.addEventListener('statechange', () => { if (w.state === 'installed') offer(); });
+          if (w) w.addEventListener('statechange', () => { if (w.state === 'installed') apply(); });
         });
-        // Checked again whenever the app comes back to the front.
-        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update(); });
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') reg.update(); else apply();
+        });
+        // Left open for hours, it still looks for a new version, and a
+        // metronome that ran on with the screen off updates once it stops.
+        setInterval(() => { if (document.visibilityState === 'visible') reg.update(); }, 30 * 60 * 1000);
+        setInterval(apply, 30 * 1000);
       }).catch((e) => console.warn('rbPwa: no offline support here', e));
-      // The first install takes control without a reload; only an agreed update reloads.
-      navigator.serviceWorker.addEventListener('controllerchange', () => { if (agreed) location.reload(); });
+      // The first install takes control without a reload; only an update reloads.
+      navigator.serviceWorker.addEventListener('controllerchange', () => { if (applying) location.reload(); });
     }
     // Installed, the browser keeps the data even when space runs short. Safari
     // in particular clears a site's storage after weeks unvisited unless it is.
